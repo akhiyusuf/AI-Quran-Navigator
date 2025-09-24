@@ -1,0 +1,5 @@
+{
+  "name": "AI Quran Navigator",
+  "description": "Chat with an AI to navigate and explore the Holy Quran. Ask for a specific chapter (Surah) and verse (Ayah), and the viewer will take you there.",
+  "requestFramePermissions": []
+}
