@@ -1,5 +1,5 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import type { AIResponse, Message, GroundingChunk } from '../types';
+import type { AIResponse, Message, GroundingChunk, VerseLocation } from '../types';
 
 const apiKey = process.env.API_KEY;
 if (!apiKey) {
@@ -9,38 +9,69 @@ if (!apiKey) {
 
 const ai = new GoogleGenAI({ apiKey });
 
-const getSystemPrompt = () => `You are a conversational guide for a Quran application. Your primary role is to help users explore the Holy Quran.
+const getSystemPrompt = () => `You are a conversational guide for a Quran application. Your primary role is to help users explore the Holy Quran by providing well-structured and easy-to-read summaries based on web search results.
 
-Analyze the user's input to determine their intent.
+When a user asks about a Quranic topic (e.g., "what does the quran say about charity?"), you MUST follow this strict process:
 
-1.  **Quran Query:** If the user asks about the Quran (e.g., "what does the quran say about charity?", "show me the story of prophet Yusuf"), your process must strictly follow these steps to prevent hallucination:
-    
-    a.  **Search:** You **MUST** use your search tool to find reliable online sources (articles, scholarly interpretations, tafsir websites) that directly address the user's query.
-    
-    b.  **Extract Verses from Sources:** Carefully analyze the content of the search results. Identify any specific Quran verse citations mentioned in these sources (e.g., "Surah Al-Baqarah, verse 277", "Quran 2:277"). The verse locations you provide to the user **MUST** come exclusively from these external sources. Do not use your own internal knowledge to suggest verses. If the online sources do not provide specific verse numbers, you must not invent any.
-    
-    c.  **Synthesize Interpretation from Sources:** Your interpretation **MUST** be a summary of the information found in the web search results. Do not add information that is not supported by the provided sources.
-    
-    d.  **Format Response:** Structure your response in three parts, separated by special markers:
-        
-        i.  **Acknowledgement:** Start with a very brief, neutral acknowledgement. Example: "Based on my search, I have found some information and relevant verses regarding the topic of charity."
-        
-        ii. **Interpretation:** Add the marker \`INTERPRETATION::\`. Following this, provide your summary synthesized purely from the web search results. Your application will display source links automatically; do not mention them in your interpretation.
-        
-        iii. **Verses:** If and only if you found specific verse citations in your search, append the marker \`VERSES::\` at the very end, followed by a valid JSON array of verse location objects. Example: \`VERSES::[{"surah":2,"ayah":277}]\`. If no specific verses were cited in the search results, you **MUST NOT** include the \`VERSES::\` marker or any JSON.
+1.  **SEARCH**: Use your search tool to find high-quality online sources to understand the topic. Your response will be grounded in these search results.
 
-    **Example of a complete, valid Quran response structure:**
-    \`I have found some verses regarding the story of Prophet Yusuf (Joseph). INTERPRETATION::The story of Prophet Yusuf is a prominent narrative in the Quran, primarily detailed in Surah Yusuf. It covers his life from his early dreams, his betrayal by his brothers, his time in Egypt, and his eventual reunion with his family. It is often seen as a testament to patience and faith in God's plan. VERSES::[{"surah":12,"ayah":4},{"surah":12,"ayah":5},{"surah":12,"ayah":6}]\`
+2.  **SYNTHESIZE & FORMAT**: Write a detailed interpretation based on the information from your search. This interpretation MUST be well-formatted using markdown for readability. As you write, cite relevant Quran verses using the format \`[QURAN:surah:ayah]\` or \`[QURAN:surah:start_ayah-end_ayah]\` for ranges.
 
-2.  **General Chat:** If the input is a general greeting, small talk, or unrelated to the Quran (e.g., "hello", "how are you?"), provide a polite, brief, conversational reply that gently steers the conversation back to exploring the Quran. Do **NOT** include the \`INTERPRETATION::\` or \`VERSES::\` markers.`;
+3.  **STRUCTURE FINAL RESPONSE**: Structure your final output using these exact markers in this order:
+    *   Start with a brief acknowledgement (e.g., "Certainly, here is some information on that topic.").
+    *   Add the marker \`INTERPRETATION::\` on a new line.
+    *   Provide your full synthesized text, formatted with markdown and including ONLY the \`[QURAN:...]\` citations.
+    *   If you cited any Quran verses, add the marker \`VERSES::\` on a new line, followed by a valid JSON array of verse locations. You MUST expand ranges into individual verses in this JSON. Example: \`VERSES::[{"surah":2,"ayah":153}]\`.
+
+**MARKDOWN FORMATTING RULES for the INTERPRETATION section:**
+*   **Headings**: Use \`#\`, \`##\`, \`###\` for headings.
+*   **Emphasis**: Use \`**bold text**\` for emphasis on *key words or phrases only*.
+*   **Lists**: Use standard markdown for ordered (\`1. \`, \`2. \`) and unordered (\`* \` or \`- \`) lists. Indent sub-lists with four spaces.
+*   **CRITICAL RULE**: Do **NOT** wrap entire lines, headings, or list items in bold markers (\`**...\`**). The application handles the styling.
+    *   Correct: \`# The Five Pillars\`
+    *   Incorrect: \`**# The Five Pillars**\`
+    *   Correct: \`1. Shahada (Faith)\`
+    *   Incorrect: \`**1. Shahada (Faith)**\`
+    *   Correct: \`* Zakat is **obligatory** charity.\`
+    *   Incorrect: \`**\* Zakat is obligatory charity.**\`
+*   **Citations**: Place Quran citations like \`[QURAN:2:153]\` within the text. Do **NOT** place citations inside of headings.
+
+**EXAMPLE OF A COMPLETE, VALID RESPONSE:**
+\`I have found some information regarding charity in the Quran.
+INTERPRETATION::
+# The Concept of Charity (Sadaqah)
+
+Charity, known as **Sadaqah** in Arabic, is a cornerstone of the Islamic faith. It is not merely a recommendation but a responsibility of the believers. The Quran mentions it in numerous places, highlighting its importance for spiritual purification [QURAN:9:103].
+
+## Types of Charity
+The Quran describes several forms of giving:
+*   **Zakat**: An obligatory annual charity.
+*   **Sadaqah**: Voluntary charity given at any time.
+
+Giving should be done without expectation of return and with a pure heart [QURAN:2:264].
+
+### Who Should Receive Charity?
+1. The poor and the needy.
+2. Relatives.
+3. Orphans.
+VERSES::[{"surah":9,"ayah":103},{"surah":2,"ayah":264}]\`
+
+For general chat (greetings, etc.), just reply politely and steer back to the Quran. Do not use the special markers.`;
 
 export const getAIResponse = async (query: string, history: Message[]): Promise<AIResponse> => {
-  // Construct chat history for the model
+  // Construct chat history for the model, giving it full context.
   const contents = [
-    ...history.map((msg) => ({
-      role: msg.sender === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.text }],
-    })),
+    ...history.map((msg) => {
+      // For AI messages, combine the acknowledgement and interpretation to form the full response context.
+      const fullText = (msg.sender === 'ai' && msg.interpretation)
+        ? `${msg.text}\n\n${msg.interpretation}`
+        : msg.text;
+      
+      return {
+        role: msg.sender === 'user' ? 'user' : 'model',
+        parts: [{ text: fullText }],
+      };
+    }),
     { role: 'user', parts: [{ text: query }] },
   ];
 
@@ -54,56 +85,89 @@ export const getAIResponse = async (query: string, history: Message[]): Promise<
         }
     });
     
-    const messageContent = response.text;
+    const rawContent = response.text;
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks as GroundingChunk[] | undefined;
 
-    const verseMarker = 'VERSES::';
+    // Define markers
     const interpretationMarker = 'INTERPRETATION::';
+    const versesMarker = 'VERSES::';
 
-    let mainContent = messageContent;
-    let verses: any[] | undefined;
+    // Helper to extract content between markers
+    const extractSection = (startMarker: string, endMarker?: string) => {
+        const startIndex = rawContent.indexOf(startMarker);
+        if (startIndex === -1) return '';
 
-    const verseMarkerIndex = mainContent.lastIndexOf(verseMarker);
+        let content = rawContent.substring(startIndex + startMarker.length);
+        
+        if (endMarker) {
+            const endIndex = content.indexOf(endMarker);
+            if (endIndex !== -1) {
+                content = content.substring(0, endIndex);
+            }
+        }
+        return content.trim();
+    };
+    
+    const interpretationText = extractSection(interpretationMarker, versesMarker) || extractSection(interpretationMarker);
+    const versesJson = extractSection(versesMarker);
 
-    if (verseMarkerIndex !== -1) {
-        mainContent = messageContent.substring(0, verseMarkerIndex).trim();
-        const versesJson = messageContent.substring(verseMarkerIndex + verseMarker.length).trim();
+    // Get the initial response text (everything before the first marker)
+    const firstMarkerIndex = rawContent.indexOf(interpretationMarker);
+    const responseText = firstMarkerIndex !== -1 ? rawContent.substring(0, firstMarkerIndex).trim() : rawContent.trim();
+    
+    // Parse Verses
+    let versesFromMarker: VerseLocation[] | undefined;
+    if (versesJson) {
         try {
             const parsedData = JSON.parse(versesJson);
             if (Array.isArray(parsedData)) {
-                const validVerses = parsedData
+                versesFromMarker = parsedData
                     .map(item => {
                         const surah = parseInt(item?.surah, 10);
                         const ayah = parseInt(item?.ayah, 10);
-                        if (!isNaN(surah) && !isNaN(ayah) && surah > 0 && ayah > 0) {
-                            return { surah, ayah };
-                        }
-                        return null;
+                        return (!isNaN(surah) && !isNaN(ayah) && surah > 0 && ayah > 0) ? { surah, ayah } : null;
                     })
-                    .filter((item): item is { surah: number; ayah: number } => item !== null);
-                if (validVerses.length > 0) {
-                    verses = validVerses;
-                }
+                    .filter((item): item is VerseLocation => item !== null);
             }
         } catch (e) {
-            console.error("Failed to parse verses JSON from AI response:", versesJson, e);
+            console.error("Failed to parse verses JSON:", versesJson, e);
         }
     }
 
-    const interpretationMarkerIndex = mainContent.indexOf(interpretationMarker);
-    let responseText = mainContent;
-    let interpretation: string | undefined;
+    // Fallback verse extraction from interpretation text
+    const extractedVerses: VerseLocation[] = [];
+    if (interpretationText) {
+        const versePattern = /\[QURAN:(\d+):(\d+)(?:-(\d+))?\]|\b(\d{1,3}):(\d+)(?:-(\d+))?\b/g;
+        let match;
+        while ((match = versePattern.exec(interpretationText)) !== null) {
+            const surah = parseInt(match[1] || match[4], 10);
+            const startAyah = parseInt(match[2] || match[5], 10);
+            const endAyahStr = match[3] || match[6];
+            const endAyah = endAyahStr ? parseInt(endAyahStr, 10) : startAyah;
 
-    if (interpretationMarkerIndex !== -1) {
-        responseText = mainContent.substring(0, interpretationMarkerIndex).trim();
-        interpretation = mainContent.substring(interpretationMarkerIndex + interpretationMarker.length).trim();
+            if (!isNaN(surah) && !isNaN(startAyah) && surah > 0 && startAyah > 0) {
+                for (let ayah = startAyah; ayah <= endAyah; ayah++) {
+                    extractedVerses.push({ surah, ayah });
+                }
+            }
+        }
     }
 
+    // Combine and deduplicate verses
+    const allVerses = [...(versesFromMarker || []), ...extractedVerses];
+    const uniqueVerseKeys = new Set<string>();
+    const uniqueVerses = allVerses.filter(v => {
+        const key = `${v.surah}:${v.ayah}`;
+        if (uniqueVerseKeys.has(key)) return false;
+        uniqueVerseKeys.add(key);
+        return true;
+    });
+
     return {
-        type: verses ? 'quran_query' : 'general_chat',
-        responseText,
-        interpretation,
-        verses: verses && verses.length > 0 ? verses : undefined,
+        type: uniqueVerses.length > 0 ? 'quran_query' : 'general_chat',
+        responseText: responseText || "I have found some information regarding your question.",
+        interpretation: interpretationText || undefined,
+        verses: uniqueVerses.length > 0 ? uniqueVerses : undefined,
         groundingChunks,
     };
 

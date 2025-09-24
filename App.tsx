@@ -281,6 +281,11 @@ const App: React.FC = () => {
           }
           return chat;
       }));
+      
+      // On desktop, automatically display the verses in the viewer for a seamless experience.
+      if (versesForMessage && window.innerWidth >= 1024) {
+        setTargetVerses(versesForMessage);
+      }
 
     } catch (error) {
       console.error('Error processing request:', error);
