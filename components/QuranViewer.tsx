@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import type { Surah, VerseLocation, Ayah } from '../types';
-import { IconInfo, IconBookmark, IconArrowLeft } from './Icons';
+import { IconInfo, IconBookmark, IconArrowLeft, IconBook } from './Icons';
 
 interface QuranViewerProps {
   quranData: Surah[];
@@ -184,7 +184,15 @@ export const QuranViewer: React.FC<QuranViewerProps> = ({ quranData, targetVerse
   }, [targetVerses]);
   
   if (verseGroups.length === 0) {
-    return <div className="flex-grow flex items-center justify-center bg-slate-100 p-4"><p className="text-slate-500">Select a verse to display.</p></div>;
+    return (
+        <div className="flex-grow flex flex-col items-center justify-center bg-slate-100 p-8 text-center">
+            <IconBook className="h-16 w-16 text-slate-400 mb-4" />
+            <h2 className="text-2xl font-bold text-slate-700">Quran Verse Viewer</h2>
+            <p className="mt-2 max-w-md text-slate-500">
+                Ask the AI about a topic or a specific verse. Verified Quranic citations from its response will be displayed here for you to read and explore.
+            </p>
+      </div>
+    );
   }
 
   // Renders the full surah with highlighted verses if they are close together.

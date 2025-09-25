@@ -21,6 +21,7 @@ export interface GroundingChunk {
 }
 
 export interface Message {
+  id: string;
   sender: 'user' | 'ai';
   text: string;
   interpretation?: string;
@@ -37,6 +38,7 @@ export interface AIResponse {
   type: 'quran_query' | 'general_chat';
   responseText: string;
   interpretation?: string;
+
   verses?: VerseLocation[];
   groundingChunks?: GroundingChunk[];
 }
@@ -46,4 +48,19 @@ export interface ChatSession {
   title: string;
   messages: Message[];
   createdAt: number;
+}
+
+export interface SavedMessage {
+  id: string; // Corresponds to Message.id
+  chatId: string;
+  chatTitle: string;
+  message: Message;
+  savedAt: number;
+}
+
+// Represents one found occurrence of the search term.
+export interface Match<K> {
+  itemId: K; // The ID of the item where the match was found.
+  occurrenceInItem: number; // 0-based index of this match within its parent item's text.
+  globalIndex: number; // 0-based index of this match in the grand scheme of all matches.
 }

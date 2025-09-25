@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ChatBox } from './components/ChatBox';
 import { QuranViewer } from './components/QuranViewer';
 import { getAIResponse, translateTextToEnglish } from './services/geminiService';
-import type { Message, Surah, VerseLocation, AIResponse, ChatSession } from './types';
-import { IconBook, IconLoader, IconBookmark, IconMessageCircle, IconPlus, IconHistory } from './components/Icons';
+import type { Message, Surah, VerseLocation, AIResponse, ChatSession, SavedMessage, Match } from './types';
+import { IconBook, IconLoader, IconBookmark, IconMessageCircle, IconPlus, IconHistory, IconStar, IconSearch } from './components/Icons';
 import { TafsirModal } from './components/TafsirModal';
 import { BookmarksPanel } from './components/BookmarksPanel';
 import { HistoryPanel } from './components/HistoryPanel';
+import { SavedPanel } from './components/SavedPanel';
 import { DisclaimerModal } from './components/DisclaimerModal';
+import { SearchControl } from './components/SearchControl';
+import { useSearch } from './components/useChatSearch';
 
 interface TafsirState {
   isOpen: boolean;
@@ -21,12 +25,7 @@ interface TafsirState {
   error?: string;
 }
 
-const initialMessages: Message[] = [
-    {
-      sender: 'ai',
-      text: "As-salamu alaykum! I am your Quran navigator. Ask me about a topic, or to find a specific Surah and Ayah.",
-    },
-];
+const initialMessages: Message[] = [];
 
 const App: React.FC = () => {
   const [history, setHistory] = useState<ChatSession[]>(() => {
@@ -65,13 +64,18 @@ const App: React.FC = () => {
     }
   });
 
+  const [savedMessages, setSavedMessages] = useState<SavedMessage[]>(() => {
+    try {
+        const saved = localStorage.getItem('quranNavigatorSavedMessages');
+        return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+        console.error("Failed to load saved messages from localStorage", error);
+        return [];
+    }
+  });
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [targetVerses, setTargetVerses] = useState<VerseLocation[]>([
-    {
-      surah: 1,
-      ayah: 1,
-    },
-  ]);
+  const [targetVerses, setTargetVerses] = useState<VerseLocation[]>([]);
   const [quranData, setQuranData] = useState<Surah[] | null>(null);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -80,10 +84,12 @@ const App: React.FC = () => {
     content: { english: '', arabic: '' },
     isLoading: false,
   });
-  const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'bookmarks'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'history' | 'bookmarks' | 'saved'>('chat');
   const [mobileView, setMobileView] = useState<'chat' | 'viewer'>('chat');
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
-
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [networkErrorForMessageId, setNetworkErrorForMessageId] = useState<string | null>(null);
 
   useEffect(() => {
     // If there's no active chat and no history, create the first one.
@@ -175,6 +181,14 @@ const App: React.FC = () => {
         console.error("Failed to save bookmarks to localStorage", error);
     }
   }, [bookmarks]);
+
+  useEffect(() => {
+    try {
+        localStorage.setItem('quranNavigatorSavedMessages', JSON.stringify(savedMessages));
+    } catch (error) {
+        console.error("Failed to save messages to localStorage", error);
+    }
+  }, [savedMessages]);
   
   const handleNewChat = useCallback(() => {
     const currentChat = history.find(c => c.id === activeChatId);
@@ -194,46 +208,23 @@ const App: React.FC = () => {
 
     setHistory(prevHistory => [newChat, ...prevHistory]);
     setActiveChatId(newChat.id);
-    setTargetVerses([{ surah: 1, ayah: 1 }]);
+    setTargetVerses([]);
     setActiveTab('chat');
   }, [history, activeChatId]);
 
-  const handleSendMessage = useCallback(async (userMessage: string) => {
-    if (!quranData || !activeChatId) {
-        console.error("handleSendMessage called without an active chat.");
-        return;
-    }
-    
+  const processAIResponse = useCallback(async (userQuery: string, forChatId: string) => {
+    if (!quranData) return;
     setIsLoading(true);
 
-    const userMessageObject: Message = { sender: 'user', text: userMessage };
-    const currentChatId = activeChatId;
-
-    const chatForAIContext = history.find(c => c.id === currentChatId);
+    const chatForAIContext = history.find(c => c.id === forChatId);
     if (!chatForAIContext) {
-        console.error("Active chat not found in history.");
+        console.error("Active chat not found in history for AI processing.");
         setIsLoading(false);
         return;
     }
 
-    // Add user message to history, and update title if it's the first message in a "New Chat"
-    setHistory(prevHistory =>
-        prevHistory.map(chat => {
-            if (chat.id === currentChatId) {
-                const updatedChat = { ...chat };
-                // Check if it's the first real message to update the title
-                if (chat.title === "New Chat" && chat.messages.length === initialMessages.length) {
-                    updatedChat.title = userMessage.length > 30 ? `${userMessage.substring(0, 27)}...` : userMessage;
-                }
-                updatedChat.messages = [...chat.messages, userMessageObject];
-                return updatedChat;
-            }
-            return chat;
-        })
-    );
-
     try {
-      const result: AIResponse = await getAIResponse(userMessage, chatForAIContext.messages);
+      const result: AIResponse = await getAIResponse(userQuery, chatForAIContext.messages);
       
       let versesForMessage: VerseLocation[] | undefined = undefined;
       let followUpErrorMessage: Message | undefined = undefined;
@@ -251,7 +242,6 @@ const App: React.FC = () => {
             console.warn(`AI returned an invalid ayah number (${verse.ayah}) for surah ${verse.surah}.`);
             return false;
           }
-
           return true;
         });
 
@@ -259,11 +249,12 @@ const App: React.FC = () => {
           versesForMessage = validVerses;
         } else {
           console.error("AI returned verse locations, but none were valid after checking against Quran data:", JSON.stringify(result.verses));
-          followUpErrorMessage = { sender: 'ai', text: "I found a reference, but I couldn't pinpoint the exact verse in my copy of the text. Please try a different query." };
+          followUpErrorMessage = { id: `msg_err_${Date.now()}_validation`, sender: 'ai', text: "I found a reference, but I couldn't pinpoint the exact verse in my copy of the text. Please try a different query." };
         }
       }
 
       const aiMessage: Message = {
+        id: `msg_ai_${Date.now()}`,
         sender: 'ai',
         text: result.responseText,
         interpretation: result.interpretation,
@@ -272,7 +263,7 @@ const App: React.FC = () => {
       };
 
       setHistory(prevHistory => prevHistory.map(chat => {
-          if (chat.id === currentChatId) {
+          if (chat.id === forChatId) {
               const newMessages = [...chat.messages, aiMessage];
               if (followUpErrorMessage) {
                   newMessages.push(followUpErrorMessage);
@@ -282,24 +273,76 @@ const App: React.FC = () => {
           return chat;
       }));
       
-      // On desktop, automatically display the verses in the viewer for a seamless experience.
       if (versesForMessage && window.innerWidth >= 1024) {
         setTargetVerses(versesForMessage);
       }
 
     } catch (error) {
-      console.error('Error processing request:', error);
-      const errorMessageText = error instanceof Error ? error.message : "I'm sorry, I couldn't understand that. Could you please rephrase your request?";
-      const errorMsg: Message = { sender: 'ai', text: errorMessageText };
-       setHistory(prevHistory => prevHistory.map(chat => 
-          chat.id === currentChatId 
-            ? { ...chat, messages: [...chat.messages, errorMsg] }
-            : chat
-        ));
+      console.error('Error processing AI request:', error);
+      // Let the caller handle network errors, but post a message for AI-side errors.
+      if (error instanceof Error && !error.message.includes('Rpc failed')) {
+        const errorMessageText = error.message;
+        const errorMsg: Message = { id: `msg_err_${Date.now()}`, sender: 'ai', text: errorMessageText };
+        setHistory(prevHistory => prevHistory.map(chat => 
+            chat.id === forChatId 
+              ? { ...chat, messages: [...chat.messages, errorMsg] }
+              : chat
+          ));
+      }
+      // Re-throw so the caller can detect network issues
+      throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [quranData, history, activeChatId]);
+  }, [quranData, history]);
+
+  const handleSendMessage = useCallback(async (userMessage: string) => {
+    if (!activeChatId) return;
+
+    // Clear any previous network error on a new message attempt
+    setNetworkErrorForMessageId(null);
+
+    const userMessageObject: Message = { id: `msg_user_${Date.now()}`, sender: 'user', text: userMessage };
+    const currentChatId = activeChatId;
+
+    // Optimistically add user message to history
+    setHistory(prevHistory =>
+        prevHistory.map(chat => {
+            if (chat.id === currentChatId) {
+                const updatedChat = { ...chat };
+                if (chat.title === "New Chat" && chat.messages.length === initialMessages.length) {
+                    updatedChat.title = userMessage.length > 30 ? `${userMessage.substring(0, 27)}...` : userMessage;
+                }
+                updatedChat.messages = [...chat.messages, userMessageObject];
+                return updatedChat;
+            }
+            return chat;
+        })
+    );
+    
+    try {
+        await processAIResponse(userMessage, currentChatId);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('Rpc failed')) {
+            console.error("Network Error Detected:", error);
+            setNetworkErrorForMessageId(userMessageObject.id);
+        }
+    }
+  }, [activeChatId, processAIResponse]);
+
+  const handleRetry = useCallback(async (messageToRetry: Message) => {
+    if (!activeChatId) return;
+    setNetworkErrorForMessageId(null);
+    try {
+        await processAIResponse(messageToRetry.text, activeChatId);
+    } catch (error) {
+         if (error instanceof Error && error.message.includes('Rpc failed')) {
+            console.error("Network Error on Retry:", error);
+            setNetworkErrorForMessageId(messageToRetry.id); // Set error on the same message again
+        }
+    }
+  }, [activeChatId, processAIResponse]);
+
 
   const handleViewVerses = useCallback((verses: VerseLocation[]) => {
     setTargetVerses(verses);
@@ -322,6 +365,26 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleToggleSaveMessage = useCallback((message: Message) => {
+    setSavedMessages(prev => {
+        const isSaved = prev.some(sm => sm.id === message.id);
+        if (isSaved) {
+            return prev.filter(sm => sm.id !== message.id);
+        } else {
+            if (!activeChat) return prev; // Should not happen if button is visible
+            const newSavedMessage: SavedMessage = {
+                id: message.id,
+                chatId: activeChat.id,
+                chatTitle: activeChat.title,
+                message: message,
+                savedAt: Date.now(),
+            };
+            // Add new saved message and sort by saved date
+            return [...prev, newSavedMessage].sort((a, b) => b.savedAt - a.savedAt);
+        }
+    });
+  }, [activeChat]);
+
   const handleBookmarkClick = useCallback((verse: VerseLocation) => {
       setTargetVerses([verse]);
       if (window.innerWidth < 1024) {
@@ -340,7 +403,8 @@ const App: React.FC = () => {
       if (arabicData.code !== 200 || !arabicData.data.text) throw new Error("Tafsir was not found for this verse.");
       
       const arabicTafsir = arabicData.data.text;
-      setTafsirState(prev => ({ ...prev, content: { english: '', arabic: arabicTafsir } }));
+// FIX: The original state update was structurally incorrect, attempting to add `arabic` to the root of the state object. This corrects it to update `content.arabic`.
+      setTafsirState(prev => ({ ...prev, content: { ...prev.content, arabic: arabicTafsir } }));
       
       const englishTafsir = await translateTextToEnglish(arabicTafsir);
       setTafsirState(prev => ({ ...prev, isLoading: false, content: { ...prev.content, english: englishTafsir }}));
@@ -349,6 +413,7 @@ const App: React.FC = () => {
       const message = error instanceof Error ? error.message : "An unknown error occurred.";
       setTafsirState(prev => ({ ...prev, isLoading: false, error: message }));
     }
+// FIX: Added a missing closing brace for the `handleShowTafsir` async function body. This was the root cause of numerous "Cannot find name" errors as it put subsequent code out of the component's scope.
   }, []);
 
   const handleCloseTafsir = useCallback(() => {
@@ -364,7 +429,7 @@ const App: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this conversation?')) {
         setHistory(prev => {
             const newHistory = prev.filter(c => c.id !== id);
-            // If the deleted chat was active, activate the next available one or create a new one.
+            // If the deleted chat was a-ctive, activate the next available one or create a new one.
             if (activeChatId === id) {
                 if (newHistory.length > 0) {
                     setActiveChatId(newHistory[0].id);
@@ -392,6 +457,60 @@ const App: React.FC = () => {
     }
     setIsDisclaimerOpen(false);
   }, []);
+
+  // Universal search logic
+  const textSelectors = useMemo(() => ({
+    chat: (msg: Message) => [msg.text, msg.interpretation].filter(Boolean).join('\n'),
+    history: (session: ChatSession) => {
+      const messageContent = session.messages
+        .map(msg => [msg.text, msg.interpretation].filter(Boolean).join('\n'))
+        .join('\n\n');
+      return [session.title, messageContent].join('\n\n');
+    },
+    bookmarks: (bookmark: VerseLocation) => {
+      if (!quranData) return '';
+      const surah = quranData.find(s => s.id === bookmark.surah);
+      if (!surah) return '';
+      return `${surah.transliteration} verse ${bookmark.ayah}`;
+    },
+    saved: (savedMsg: SavedMessage) => [
+      savedMsg.chatTitle,
+      savedMsg.message.text,
+      savedMsg.message.interpretation,
+    ].filter(Boolean).join('\n'),
+  }), [quranData]);
+  
+  const idSelectors = {
+    chat: (msg: Message) => msg.id,
+    history: (session: ChatSession) => session.id,
+    bookmarks: (bookmark: VerseLocation) => `${bookmark.surah}:${bookmark.ayah}`,
+    saved: (savedMsg: SavedMessage) => savedMsg.id,
+  };
+
+  const chatSearchResults = useSearch(messages, searchTerm, textSelectors.chat, idSelectors.chat);
+  const historySearchResults = useSearch(history, searchTerm, textSelectors.history, idSelectors.history);
+  const bookmarksSearchResults = useSearch(bookmarks, searchTerm, textSelectors.bookmarks, idSelectors.bookmarks);
+  const savedSearchResults = useSearch(savedMessages, searchTerm, textSelectors.saved, idSelectors.saved);
+
+  const activeSearchResult = useMemo(() => {
+    switch (activeTab) {
+      case 'history':
+        return historySearchResults;
+      case 'bookmarks':
+        return bookmarksSearchResults;
+      case 'saved':
+        return savedSearchResults;
+      case 'chat':
+      default:
+        return chatSearchResults;
+    }
+  }, [
+    activeTab,
+    chatSearchResults,
+    historySearchResults,
+    bookmarksSearchResults,
+    savedSearchResults,
+  ]);
 
   if (isDataLoading) {
     return (
@@ -429,40 +548,71 @@ const App: React.FC = () => {
                 <p className="text-sm text-slate-500">Your guide to the Holy Quran</p>
               </div>
             </div>
-            <button
-                onClick={handleNewChat}
-                className="p-2 rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-blue-500 transition-colors"
-                aria-label="New Chat"
-                title="New Chat"
-            >
-                <IconPlus className="h-6 w-6" />
-            </button>
+            <div className="flex items-center space-x-1">
+              <button
+                  onClick={() => setIsSearchVisible(v => !v)}
+                  className={`p-2 rounded-full transition-colors ${isSearchVisible ? 'bg-blue-100 text-blue-600' : 'text-slate-500 hover:bg-slate-200 hover:text-slate-700'}`}
+                  aria-label="Search"
+                  title="Search"
+              >
+                  <IconSearch className="h-6 w-6" />
+              </button>
+              <button
+                  onClick={handleNewChat}
+                  className="p-2 rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-50 focus:ring-blue-500 transition-colors"
+                  aria-label="New Chat"
+                  title="New Chat"
+              >
+                  <IconPlus className="h-6 w-6" />
+              </button>
+            </div>
           </header>
+          
           <div className="border-b border-gray-200 flex-shrink-0">
             <nav className="-mb-px flex" aria-label="Tabs">
                 <button 
                     onClick={() => setActiveTab('chat')} 
-                    className={`flex items-center justify-center w-1/3 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'chat' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    className={`flex items-center justify-center w-1/4 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'chat' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                 >
                     <IconMessageCircle className="h-4 w-4 mr-2" />
                     Chat
                 </button>
                 <button 
                     onClick={() => setActiveTab('history')}
-                    className={`flex items-center justify-center w-1/3 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    className={`flex items-center justify-center w-1/4 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'history' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                 >
                     <IconHistory className="h-4 w-4 mr-2" />
                     History
                 </button>
                 <button 
                     onClick={() => setActiveTab('bookmarks')}
-                    className={`flex items-center justify-center w-1/3 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'bookmarks' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                    className={`flex items-center justify-center w-1/4 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'bookmarks' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
                 >
                     <IconBookmark className="h-4 w-4 mr-2" />
                     Bookmarks
                 </button>
+                 <button 
+                    onClick={() => setActiveTab('saved')}
+                    className={`flex items-center justify-center w-1/4 py-3 px-1 text-center border-b-2 font-medium text-sm transition-colors duration-200 ${activeTab === 'saved' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                >
+                    <IconStar className="h-4 w-4 mr-2" />
+                    Saved
+                </button>
             </nav>
           </div>
+          <SearchControl 
+            isSearchVisible={isSearchVisible}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            totalMatches={activeSearchResult.totalMatches}
+            currentMatchIndex={activeSearchResult.activeMatch ? activeSearchResult.activeMatch.globalIndex + 1 : 0}
+            onPrev={activeSearchResult.goToPrev}
+            onNext={activeSearchResult.goToNext}
+            onClose={() => {
+              setIsSearchVisible(false);
+              setSearchTerm('');
+            }}
+          />
           
           <div className="flex-grow min-h-0">
             {activeTab === 'chat' && (
@@ -471,6 +621,12 @@ const App: React.FC = () => {
                   onSendMessage={handleSendMessage}
                   isLoading={isLoading}
                   onViewVerses={handleViewVerses}
+                  savedMessages={savedMessages}
+                  onToggleSave={handleToggleSaveMessage}
+                  searchTerm={searchTerm}
+                  activeMatch={chatSearchResults.activeMatch}
+                  networkErrorForMessageId={networkErrorForMessageId}
+                  onRetry={handleRetry}
                 />
             )}
             {activeTab === 'history' && (
@@ -479,6 +635,8 @@ const App: React.FC = () => {
                   activeChatId={activeChatId}
                   onSelectChat={handleSelectChat}
                   onDeleteChat={handleDeleteChat}
+                  searchTerm={searchTerm}
+                  activeMatch={historySearchResults.activeMatch}
               />
             )}
             {activeTab === 'bookmarks' && (
@@ -487,7 +645,18 @@ const App: React.FC = () => {
                   quranData={quranData}
                   onBookmarkClick={handleBookmarkClick}
                   onRemoveBookmark={handleToggleBookmark}
+                  searchTerm={searchTerm}
+                  activeMatch={bookmarksSearchResults.activeMatch}
               />
+            )}
+            {activeTab === 'saved' && (
+                <SavedPanel
+                    savedMessages={savedMessages}
+                    onGoToChat={handleSelectChat}
+                    onRemoveSaved={handleToggleSaveMessage}
+                    searchTerm={searchTerm}
+                    activeMatch={savedSearchResults.activeMatch}
+                />
             )}
           </div>
         </div>

@@ -54,6 +54,12 @@ export const IconBookmark: React.FC<React.SVGProps<SVGSVGElement>> = (props) => 
   </svg>
 );
 
+export const IconStar: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518 .442c.499.04 .701.663 .32 1.011l-4.218 4.111a.563.563 0 0 0-.162.632l1.245 5.354a.562.562 0 0 1-.813.621l-4.71-2.634a.563.563 0 0 0-.652 0l-4.71 2.634a.562.562 0 0 1-.813-.621l1.245-5.354a.563.563 0 0 0-.162-.632l-4.218-4.111a.562.562 0 0 1 .32-1.011l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5z" />
+  </svg>
+);
+
 export const IconTrash: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
@@ -76,6 +82,12 @@ export const IconLink: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 export const IconChevronDown: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+  </svg>
+);
+
+export const IconChevronUp: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m4.5 15.75 7.5-7.5 7.5 7.5" />
   </svg>
 );
 
@@ -128,5 +140,44 @@ export const IconCopy: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 export const IconCheck: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="m4.5 12.75 6 6 9-13.5" />
+  </svg>
+);
+
+export const IconSearch: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+  </svg>
+);
+
+export const IconCloudSearch: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M11.25 12.75c-1.24 0-2.25.75-2.25 1.5s1.01 1.5 2.25 1.5c.31 0 .6-.06.86-.17a2.99 2.99 0 0 1-3.61-3.61c.11-.26.17-.55.17-.86 0-.83.34-1.57.88-2.12" />
+    {/* FIX: Removed corrupted path element that caused a JSX error. */}
+    <path d="M12.75 12.75c0 .62.4 1.17 1 1.41a2.25 2.25 0 0 0 1.14 0c.6-.24 1-.8 1-1.41a2.25 2.25 0 0 0-1.14 0c-.6.24-1 .8-1 1.41z" />
+    <path d="M15.75 6.75a4.5 4.5 0 0 1 4.5 4.5c0 1.5-1.5 4.5-1.5 4.5s-1.5-3-1.5-4.5a4.5 4.5 0 0 1-1.5-4.5" />
+    <path d="M11.25 3.75a4.5 4.5 0 0 1 4.5 4.5" />
+  </svg>
+);
+
+export const IconFileText: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M14.25 2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v15a2.25 2.25 0 0 0 2.25 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25V8.25L14.25 2.25z" />
+    <path d="M13.5 3v5.25h5.25" />
+    <path d="M15 12.75H9" />
+    <path d="M15 15.75H9" />
+    <path d="M11.25 9.75H9" />
+  </svg>
+);
+
+export const IconShieldCheck: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M9 12.75 11.25 15 15 9.75" />
+    <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" />
+  </svg>
+);
+
+export const IconArrowDown: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M12 4.5v15m0 0 6-6m-6 6-6-6" />
   </svg>
 );
