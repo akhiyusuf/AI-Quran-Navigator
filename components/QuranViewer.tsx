@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo, forwardRef, useImperativeHandle, useState } from 'react';
 import type { Surah, VerseLocation, Ayah } from '../types';
-import { IconInfo, IconBookmark, IconArrowLeft, IconBook, IconChevronsRight } from './Icons';
+import { IconInfo, IconBookmark, IconArrowLeft, IconComment, IconChevronsRight } from './Icons';
 
 export interface QuranViewerRef {
   scrollToVerse: (verse: VerseLocation) => void;
@@ -300,10 +300,10 @@ export const QuranViewer = forwardRef<QuranViewerRef, QuranViewerProps>(({ quran
                   <h2 className="text-2xl font-bold text-[var(--foreground)]">Quran Viewer</h2>
               </header>
               <div className="flex-grow flex flex-col items-center justify-center bg-[var(--background)] p-8 text-center">
-                  <IconBook className="h-16 w-16 text-[var(--muted-foreground)] mb-4" />
+                  <IconComment className="h-16 w-16 text-[var(--muted-foreground)] mb-4" />
                   <h2 className="text-2xl font-bold text-[var(--foreground)]">Quran Verse Viewer</h2>
                   <p className="mt-2 max-w-md text-[var(--muted-foreground)]">
-                      Ask the AI about a topic or a specific verse. Verified Quranic citations from its response will be displayed here for you to read and explore.
+                      Ask the AI about a topic or a specific verse. After the AI responds, click the 'Verses' button on its reply to view the cited Quranic passages here.
                   </p>
               </div>
             </div>
@@ -335,7 +335,9 @@ export const QuranViewer = forwardRef<QuranViewerRef, QuranViewerProps>(({ quran
                     isHighlighted={isHighlighted}
                     onShowTafsir={onShowTafsir}
                     onToggleBookmark={onToggleBookmark}
-                    setRef={el => verseRefs.current.set(`${surah.id}:${verse.id}`, el)}
+                    // FIX: Wrapped the expression in braces to ensure the ref callback returns `void`.
+                    // The `Map.set` method returns the map instance, which caused a type error.
+                    setRef={el => { verseRefs.current.set(`${surah.id}:${verse.id}`, el); }}
                     />
                 );
                 })}
@@ -385,7 +387,9 @@ export const QuranViewer = forwardRef<QuranViewerRef, QuranViewerProps>(({ quran
                             isHighlighted={true} // All displayed verses are targets
                             onShowTafsir={onShowTafsir}
                             onToggleBookmark={onToggleBookmark}
-                            setRef={el => verseRefs.current.set(`${surah.id}:${verse.id}`, el)}
+                            // FIX: Wrapped the expression in braces to ensure the ref callback returns `void`.
+                            // The `Map.set` method returns the map instance, which caused a type error.
+                            setRef={el => { verseRefs.current.set(`${surah.id}:${verse.id}`, el); }}
                             />
                         );
                         })}

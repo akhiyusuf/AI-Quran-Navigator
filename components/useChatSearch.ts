@@ -1,11 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
 
-// Represents one found occurrence of the search term.
-export interface Match<K> {
-  itemId: K; // The ID of the item where the match was found.
-  occurrenceInItem: number; // 0-based index of this match within its parent item's text.
-  globalIndex: number; // 0-based index of this match in the grand scheme of all matches.
-}
+
+import { useState, useMemo, useCallback, useEffect } from 'react';
+// FIX: Import the canonical Match interface from the central types file to resolve type conflicts.
+import type { Match } from '../types';
 
 // The hook's return type.
 export interface SearchResult<K> {

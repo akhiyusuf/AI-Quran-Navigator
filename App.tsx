@@ -2,16 +2,16 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChatBox } from './components/ChatBox';
 import { QuranViewer, type QuranViewerRef } from './components/QuranViewer';
-import { streamAIResponse, parseAIResponse, translateTextToEnglish } from './services/geminiService';
+import { streamAIResponse, parseAIResponse, translateTextToEnglish, generateChatTitle, streamTutorialResponse } from './services/geminiService';
 import type { Message, Surah, VerseLocation, AIResponse, ChatSession, SavedMessage, Match } from './types';
-import { IconComment, IconLoader, IconBookmark, IconMessageCircle, IconPlus, IconHistory, IconStar, IconSearch, IconSettings, IconTarget, IconX, IconMenu, IconChevronsLeft, IconBook, IconChevronsRight } from './components/Icons';
+import { IconComment, IconLoader, IconBookmark, IconMessageCircle, IconPlus, IconHistory, IconStar, IconSearch, IconSettings, IconTarget, IconX, IconMenu, IconBook, IconChevronsRight, IconHelpCircle } from './components/Icons';
 import { TafsirModal } from './components/TafsirModal';
 import { BookmarksPanel } from './components/BookmarksPanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import { SavedPanel } from './components/SavedPanel';
 import { DisclaimerModal } from './components/DisclaimerModal';
 import { SearchControl } from './components/SearchControl';
-import { useSearch } from './components/useChatSearch';
+import { useSearch, type SearchResult } from './components/useChatSearch';
 import { ThemeSwitcher, type Theme } from './components/ThemeSwitcher';
 import type { GenerateContentResponse } from '@google/genai';
 
@@ -27,6 +27,207 @@ interface TafsirState {
   isLoading: boolean;
   error?: string;
 }
+
+// Props for the new AppSidebar component
+interface AppSidebarProps {
+  isSidebarCollapsed: boolean;
+  setIsSidebarCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  handleNewChat: () => void;
+  activeTab: 'chat' | 'bookmarks' | 'saved';
+  setActiveTab: React.Dispatch<React.SetStateAction<'chat' | 'bookmarks' | 'saved'>>;
+  searchTerm: string;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+  historySearchResults: SearchResult<string>;
+  history: ChatSession[];
+  activeChatId: string | null;
+  onSelectChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+  onRenameChat: (id: string, newTitle: string) => void;
+  bookmarks: VerseLocation[];
+  quranData: Surah[] | null;
+  onBookmarkClick: (verse: VerseLocation) => void;
+  onRemoveBookmark: (verse: VerseLocation) => void;
+  savedMessages: SavedMessage[];
+  onRemoveSaved: (message: Message) => void;
+  theme: Theme;
+  onThemeChange: (theme: Theme) => void;
+  isThemeSwitcherOpen: boolean;
+  setIsThemeSwitcherOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onOpenTutorial: () => void;
+}
+
+// The AppSidebar component, now defined outside of App for stability.
+const AppSidebar: React.FC<AppSidebarProps> = ({
+  isSidebarCollapsed,
+  setIsSidebarCollapsed,
+  setIsSidebarOpen,
+  handleNewChat,
+  activeTab,
+  setActiveTab,
+  searchTerm,
+  setSearchTerm,
+  historySearchResults,
+  history,
+  activeChatId,
+  onSelectChat,
+  onDeleteChat,
+  onRenameChat,
+  bookmarks,
+  quranData,
+  onBookmarkClick,
+  onRemoveBookmark,
+  savedMessages,
+  onRemoveSaved,
+  theme,
+  onThemeChange,
+  isThemeSwitcherOpen,
+  setIsThemeSwitcherOpen,
+  onOpenTutorial,
+}) => {
+  return (
+    <div className={`flex flex-col bg-[var(--muted)] text-[var(--foreground)] border-r border-[var(--border)] h-full transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+        <header className="p-2 flex-shrink-0 h-[73px] flex items-center justify-between">
+            <button
+                onClick={() => setIsSidebarCollapsed(p => !p)}
+                className="p-3 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] hidden lg:flex"
+                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+                <IconMenu className="h-6 w-6" />
+            </button>
+
+            {/* Mobile: Spacer to push the X to the right */}
+            <div className="lg:hidden" />
+
+            {/* Mobile: Close Button */}
+            <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-3 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] lg:hidden"
+                aria-label="Close menu"
+            >
+                <IconX className="h-6 w-6" />
+            </button>
+        </header>
+
+        <div className="flex flex-col flex-grow min-h-0 px-2 overflow-y-auto">
+            <div className="space-y-1 flex-shrink-0">
+                <button
+                    onClick={handleNewChat}
+                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]`}
+                    title="New Chat"
+                >
+                    <IconPlus className="h-5 w-5 flex-shrink-0" />
+                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>New Chat</span>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('chat')} 
+                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'chat' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
+                    title="Chat History"
+                >
+                    <IconMessageCircle className="h-5 w-5 flex-shrink-0" />
+                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>History</span>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('bookmarks')}
+                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'bookmarks' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
+                    title="Bookmarks"
+                >
+                    <IconBookmark className="h-5 w-5 flex-shrink-0" />
+                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Bookmarks</span>
+                </button>
+                <button 
+                    onClick={() => setActiveTab('saved')}
+                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'saved' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
+                    title="Saved"
+                >
+                    <IconStar className="h-5 w-5 flex-shrink-0" />
+                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Saved</span>
+                </button>
+            </div>
+            
+            <div className={`flex flex-col flex-grow min-h-0 pt-2 ${isSidebarCollapsed ? 'hidden' : ''}`}>
+                <SearchControl 
+                    isSearchVisible={true}
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                    totalMatches={historySearchResults.totalMatches}
+                    currentMatchIndex={historySearchResults.activeMatch ? historySearchResults.activeMatch.globalIndex + 1 : 0}
+                    onPrev={historySearchResults.goToPrev}
+                    onNext={historySearchResults.goToNext}
+                    onClose={() => setSearchTerm('')}
+                    placeholder="Search history..."
+                />
+                <div className="flex-grow min-h-0 mt-2 border-t border-[var(--border)]">
+                    {activeTab === 'chat' && (
+                        <HistoryPanel
+                            history={history}
+                            activeChatId={activeChatId}
+                            onSelectChat={onSelectChat}
+                            onDeleteChat={onDeleteChat}
+                            onRenameChat={onRenameChat}
+                            searchTerm={searchTerm}
+                            activeMatch={historySearchResults.activeMatch}
+                        />
+                    )}
+                    {activeTab === 'bookmarks' && (
+                        <BookmarksPanel
+                            bookmarks={bookmarks}
+                            quranData={quranData}
+                            onBookmarkClick={onBookmarkClick}
+                            onRemoveBookmark={onRemoveBookmark}
+                            searchTerm={""}
+                            activeMatch={null}
+                        />
+                    )}
+                    {activeTab === 'saved' && (
+                        <SavedPanel
+                            savedMessages={savedMessages}
+                            onGoToChat={onSelectChat}
+                            onRemoveSaved={onRemoveSaved}
+                            searchTerm={""}
+                            activeMatch={null}
+                        />
+                    )}
+                </div>
+            </div>
+        </div>
+        
+        <footer className="p-2 border-t border-[var(--border)] flex-shrink-0">
+             <div className="space-y-1">
+                <button
+                    onClick={onOpenTutorial}
+                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                    aria-label="How to use this app"
+                    title="How to use this app"
+                >
+                    <IconHelpCircle className="h-5 w-5 flex-shrink-0" />
+                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>How to Use</span>
+                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setIsThemeSwitcherOpen(v => !v)}
+                        className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] ${isSidebarCollapsed ? 'justify-center' : ''}`}
+                        aria-label="Change theme"
+                        title="Change theme"
+                    >
+                        <IconSettings className="h-5 w-5 flex-shrink-0" />
+                        <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Theme</span>
+                    </button>
+                    {isThemeSwitcherOpen && (
+                        <ThemeSwitcher 
+                            currentTheme={theme} 
+                            onThemeChange={onThemeChange}
+                            onClose={() => setIsThemeSwitcherOpen(false)}
+                        />
+                    )}
+                </div>
+            </div>
+        </footer>
+    </div>
+  );
+};
+
 
 const MobileVerseTray: React.FC<{
     verses: VerseLocation[],
@@ -81,6 +282,32 @@ const MobileVerseTray: React.FC<{
         </div>
     );
 };
+
+const TutorialPrompt: React.FC<{ onStart: () => void; onSkip: () => void; }> = ({ onStart, onSkip }) => (
+    <div className="flex flex-col items-center justify-center h-full text-center p-4 bg-[var(--background)]">
+        <div className="p-4 rounded-lg bg-[var(--primary-soft)] mb-4">
+            <IconHelpCircle className="h-10 w-10 text-[var(--primary-soft-foreground)]" />
+        </div>
+        <h2 className="text-2xl font-bold text-[var(--foreground)]">Welcome to Quran Navigator!</h2>
+        <p className="mt-2 max-w-md text-[var(--muted-foreground)]">
+            Would you like a quick interactive tutorial to learn how to use the app?
+        </p>
+        <div className="mt-8 flex gap-4">
+            <button
+                onClick={onSkip}
+                className="px-6 py-2 text-sm font-medium rounded-lg bg-[var(--accent)] text-[var(--accent-foreground)] hover:bg-opacity-80 transition-colors"
+            >
+                No, thanks
+            </button>
+            <button
+                onClick={onStart}
+                className="px-6 py-2 text-sm font-medium rounded-lg bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)] transition-colors"
+            >
+                Yes, please!
+            </button>
+        </div>
+    </div>
+);
 
 
 const initialMessages: Message[] = [];
@@ -158,8 +385,13 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'chat' | 'bookmarks' | 'saved'>('chat');
   const [mobileView, setMobileView] = useState<'chat' | 'viewer'>('chat');
   const [isDisclaimerOpen, setIsDisclaimerOpen] = useState<boolean>(false);
-  const [isSearchVisible, setIsSearchVisible] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
+  
+  // Search states
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [isChatSearchVisible, setIsChatSearchVisible] = useState(false);
+  const [chatSearchTerm, setChatSearchTerm] = useState('');
+
   const [networkErrorForMessageId, setNetworkErrorForMessageId] = useState<string | null>(null);
   const [isMobileTrayOpen, setIsMobileTrayOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -288,30 +520,51 @@ const App: React.FC = () => {
     const aiMessagePlaceholder: Message = { id: `msg_ai_${Date.now()}`, sender: 'ai', text: '' };
     const currentChatId = activeChatId;
 
-    const currentMessages = history.find(c => c.id === currentChatId)?.messages || [];
-    const historyForAI = [...currentMessages, userMessageObject];
+    const currentChat = history.find(c => c.id === currentChatId);
+    if (!currentChat) {
+        setIsLoading(false);
+        return; // Early exit if chat is not found
+    }
 
-    setHistory(prevHistory => {
-        return prevHistory.map(chat => {
-            if (chat.id === currentChatId) {
-                const updatedChat = { ...chat };
-                if (chat.title === "New Chat" && chat.messages.length === initialMessages.length) {
-                    updatedChat.title = userMessage.length > 30 ? `${userMessage.substring(0, 27)}...` : userMessage;
-                }
-                updatedChat.messages = [...currentMessages, userMessageObject, aiMessagePlaceholder];
-                return updatedChat;
+    const streamFn = currentChat.isTutorial ? streamTutorialResponse : streamAIResponse;
+
+    const currentMessages = currentChat.messages;
+    const historyForAI = [...currentMessages, userMessageObject];
+    const isNewChat = currentChat.title === "New Chat" && currentMessages.length === initialMessages.length;
+
+    // Add user message and AI placeholder to the chat
+    setHistory(prevHistory => prevHistory.map(chat =>
+        chat.id === currentChatId
+            ? { ...chat, messages: [...currentMessages, userMessageObject, aiMessagePlaceholder] }
+            : chat
+    ));
+    
+    // Asynchronously generate a title for new chats
+    if (isNewChat && !currentChat.isTutorial) {
+        (async () => {
+            try {
+                const newTitle = await generateChatTitle(userMessage);
+                setHistory(prevHistory => prevHistory.map(chat =>
+                    chat.id === currentChatId ? { ...chat, title: newTitle } : chat
+                ));
+            } catch (error) {
+                console.error("Title generation failed, using fallback:", error);
+                const fallbackTitle = userMessage.length > 30 ? `${userMessage.substring(0, 27)}...` : userMessage;
+                setHistory(prevHistory => prevHistory.map(chat =>
+                    chat.id === currentChatId ? { ...chat, title: fallbackTitle } : chat
+                ));
             }
-            return chat;
-        });
-    });
+        })();
+    }
     
     try {
       let fullText = "";
       let finalResponse: GenerateContentResponse | null = null;
       
-      const stream = streamAIResponse(historyForAI);
+      const stream = streamFn(historyForAI);
 
       for await (const chunk of stream) {
+        // FIX: The `text` property should be accessed directly, not as a function call.
         const chunkText = chunk.text;
         if (chunkText) {
           const words = chunkText.split(/(\s+)/);
@@ -376,6 +629,7 @@ const App: React.FC = () => {
                     groundingChunks: parsedData.groundingChunks,
                     verses: parsedData.verses,
                     rawContent: parsedData.rawContent,
+                    suggestions: parsedData.suggestions,
                   } 
                 : msg
             );
@@ -417,6 +671,7 @@ const App: React.FC = () => {
         return;
     }
     
+    const streamFn = chatForAIContext.isTutorial ? streamTutorialResponse : streamAIResponse;
     const historyForAI = chatForAIContext.messages.slice(0, chatForAIContext.messages.findIndex(m => m.id === messageToRetry.id) + 1);
     const aiMessagePlaceholder: Message = { id: `msg_ai_${Date.now()}`, sender: 'ai', text: '' };
 
@@ -430,9 +685,10 @@ const App: React.FC = () => {
       let fullText = "";
       let finalResponse: GenerateContentResponse | null = null;
       
-      const stream = streamAIResponse(historyForAI);
+      const stream = streamFn(historyForAI);
 
       for await (const chunk of stream) {
+        // FIX: The `text` property should be accessed directly, not as a function call.
         const chunkText = chunk.text;
         if (chunkText) {
             const words = chunkText.split(/(\s+)/);
@@ -497,6 +753,7 @@ const App: React.FC = () => {
                     groundingChunks: parsedData.groundingChunks,
                     verses: parsedData.verses,
                     rawContent: parsedData.rawContent,
+                    suggestions: parsedData.suggestions,
                   } 
                 : msg
             );
@@ -630,6 +887,15 @@ const App: React.FC = () => {
     setIsSidebarOpen(false); // Close sidebar on mobile after selection
   }, []);
 
+  const handleRenameChat = useCallback((id: string, newTitle: string) => {
+    if (!newTitle.trim()) return; // Don't allow empty titles
+    setHistory(prev =>
+        prev.map(chat =>
+            chat.id === id ? { ...chat, title: newTitle.trim() } : chat
+        )
+    );
+  }, []);
+
   const handleDeleteChat = useCallback((id: string) => {
     if (window.confirm('Are you sure you want to delete this conversation?')) {
         setHistory(prev => {
@@ -651,6 +917,103 @@ const App: React.FC = () => {
 
   const handleCloseDisclaimer = useCallback(() => {
     setIsDisclaimerOpen(false);
+    const hasSeenTutorial = localStorage.getItem('quranNavigatorTutorialSeen');
+    if (!hasSeenTutorial) {
+        setShowTutorialPrompt(true);
+    }
+  }, []);
+
+  const handleStartTutorial = useCallback(async () => {
+    setShowTutorialPrompt(false);
+    localStorage.setItem('quranNavigatorTutorialSeen', 'true');
+
+    const tutorialChat: ChatSession = {
+        id: `chat_tutorial_${Date.now()}`,
+        title: "Interactive Tutorial",
+        messages: [],
+        createdAt: Date.now(),
+        isTutorial: true,
+    };
+    
+    const aiMessagePlaceholder: Message = { id: `msg_ai_${Date.now()}`, sender: 'ai', text: '' };
+    tutorialChat.messages.push(aiMessagePlaceholder);
+    
+    setHistory(prev => [tutorialChat, ...prev]);
+    setActiveChatId(tutorialChat.id);
+    setIsLoading(true);
+    setIsSidebarOpen(false);
+    setActiveTab('chat');
+
+    try {
+      let fullText = "";
+      let finalResponse: GenerateContentResponse | null = null;
+      
+      const stream = streamTutorialResponse([]);
+
+      for await (const chunk of stream) {
+        // FIX: The `text` property should be accessed directly, not as a function call.
+        const chunkText = chunk.text;
+        if (chunkText) {
+          const words = chunkText.split(/(\s+)/);
+          for (const word of words) {
+              if (word === '') continue;
+              fullText += word;
+              
+              const interpretationMarker = 'INTERPRETATION::';
+              let streamingInterpretation: string | undefined = undefined;
+              const interpretationIndex = fullText.indexOf(interpretationMarker);
+
+              if (interpretationIndex !== -1) {
+                  streamingInterpretation = fullText.substring(interpretationIndex + interpretationMarker.length);
+              }
+              
+              setHistory(prevHistory =>
+                prevHistory.map(chat => {
+                  if (chat.id === tutorialChat.id) {
+                    const newMessages = chat.messages.map(msg =>
+                      msg.id === aiMessagePlaceholder.id ? { ...msg, interpretation: streamingInterpretation?.trimStart() } : msg
+                    );
+                    return { ...chat, messages: newMessages };
+                  }
+                  return chat;
+                })
+              );
+              await new Promise(resolve => setTimeout(resolve, 10));
+          }
+        }
+        finalResponse = chunk;
+      }
+
+      const parsedData = parseAIResponse(fullText, []); // No grounding chunks for tutorial
+      
+      setHistory(prevHistory =>
+        prevHistory.map(chat => {
+          if (chat.id === tutorialChat.id) {
+            const newMessages = chat.messages.map(msg =>
+              msg.id === aiMessagePlaceholder.id 
+                ? { ...msg, ...parsedData, text: parsedData.responseText }
+                : msg
+            );
+            return { ...chat, messages: newMessages };
+          }
+          return chat;
+        })
+      );
+      
+      if (parsedData.verses && parsedData.verses.length > 0) {
+        setTargetVerses(parsedData.verses);
+      }
+    } catch (error) {
+        console.error("Tutorial initiation failed", error);
+        setHistory(prev => prev.filter(chat => chat.id !== tutorialChat.id));
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
+
+  const handleSkipTutorial = useCallback(() => {
+      setShowTutorialPrompt(false);
+      localStorage.setItem('quranNavigatorTutorialSeen', 'true');
   }, []);
 
   // Universal search logic
@@ -661,130 +1024,46 @@ const App: React.FC = () => {
         .join('\n\n');
       return [session.title, messageContent].join('\n\n');
     },
+    chat: (message: Message) => {
+      return [message.text, message.interpretation].filter(Boolean).join('\n');
+    }
   }), []);
   
-  const idSelectors = {
+  const idSelectors = useMemo(() => ({
     history: (session: ChatSession) => session.id,
-  };
+    chat: (message: Message) => message.id,
+  }), []);
 
-  const historySearchResults = useSearch(history, searchTerm, textSelectors.history, idSelectors.history);
+  const historySearchResults = useSearch<ChatSession, string>(history, historySearchTerm, textSelectors.history, idSelectors.history);
+  const chatSearchResults = useSearch<Message, string>(activeChat?.messages || [], chatSearchTerm, textSelectors.chat, idSelectors.chat);
   
-  const AppSidebar = (
-    <div className={`flex flex-col bg-[var(--muted)] text-[var(--foreground)] border-r border-[var(--border)] h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
-        <header className="p-2 flex-shrink-0 h-[73px] flex items-center">
-            <button
-                onClick={() => setIsSidebarCollapsed(p => !p)}
-                className="p-3 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] hidden lg:flex"
-                aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-                title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-                <IconMenu className="h-6 w-6" />
-            </button>
-        </header>
-
-        <div className="flex flex-col flex-grow min-h-0 px-2 overflow-y-auto">
-            <div className="space-y-1 flex-shrink-0">
-                <button
-                    onClick={handleNewChat}
-                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]`}
-                    title="New Chat"
-                >
-                    <IconPlus className="h-5 w-5 flex-shrink-0" />
-                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>New Chat</span>
-                </button>
-                <button 
-                    onClick={() => setActiveTab('chat')} 
-                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'chat' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
-                    title="Chat History"
-                >
-                    <IconMessageCircle className="h-5 w-5 flex-shrink-0" />
-                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>History</span>
-                </button>
-                <button 
-                    onClick={() => setActiveTab('bookmarks')}
-                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'bookmarks' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
-                    title="Bookmarks"
-                >
-                    <IconBookmark className="h-5 w-5 flex-shrink-0" />
-                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Bookmarks</span>
-                </button>
-                <button 
-                    onClick={() => setActiveTab('saved')}
-                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 ${isSidebarCollapsed ? 'justify-center' : ''} ${activeTab === 'saved' ? 'bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)]'}`}
-                    title="Saved"
-                >
-                    <IconStar className="h-5 w-5 flex-shrink-0" />
-                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Saved</span>
-                </button>
-            </div>
-            
-            <div className={`flex flex-col flex-grow min-h-0 pt-2 ${isSidebarCollapsed ? 'hidden' : ''}`}>
-                <SearchControl 
-                    isSearchVisible={true}
-                    searchTerm={searchTerm}
-                    onSearchTermChange={setSearchTerm}
-                    totalMatches={historySearchResults.totalMatches}
-                    currentMatchIndex={historySearchResults.activeMatch ? historySearchResults.activeMatch.globalIndex + 1 : 0}
-                    onPrev={historySearchResults.goToPrev}
-                    onNext={historySearchResults.goToNext}
-                    onClose={() => setSearchTerm('')}
-                />
-                <div className="flex-grow min-h-0 mt-2 border-t border-[var(--border)]">
-                    {activeTab === 'chat' && (
-                        <HistoryPanel
-                            history={history}
-                            activeChatId={activeChatId}
-                            onSelectChat={handleSelectChat}
-                            onDeleteChat={handleDeleteChat}
-                            searchTerm={searchTerm}
-                            activeMatch={historySearchResults.activeMatch}
-                        />
-                    )}
-                    {activeTab === 'bookmarks' && (
-                        <BookmarksPanel
-                            bookmarks={bookmarks}
-                            quranData={quranData}
-                            onBookmarkClick={handleBookmarkClick}
-                            onRemoveBookmark={handleToggleBookmark}
-                            searchTerm={""}
-                            activeMatch={null}
-                        />
-                    )}
-                    {activeTab === 'saved' && (
-                        <SavedPanel
-                            savedMessages={savedMessages}
-                            onGoToChat={handleSelectChat}
-                            onRemoveSaved={handleToggleSaveMessage}
-                            searchTerm={""}
-                            activeMatch={null}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
-        
-        <footer className="p-2 border-t border-[var(--border)] flex-shrink-0">
-             <div className="relative">
-                <button
-                    onClick={() => setIsThemeSwitcherOpen(v => !v)}
-                    className={`flex items-center gap-3 w-full p-3 rounded-md font-medium text-sm transition-colors duration-200 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--accent)] ${isSidebarCollapsed ? 'justify-center' : ''}`}
-                    aria-label="Change theme"
-                    title="Change theme"
-                >
-                    <IconSettings className="h-5 w-5 flex-shrink-0" />
-                    <span className={`whitespace-nowrap ${isSidebarCollapsed ? 'hidden' : ''}`}>Theme</span>
-                </button>
-                {isThemeSwitcherOpen && (
-                    <ThemeSwitcher 
-                        currentTheme={theme} 
-                        onThemeChange={setTheme}
-                        onClose={() => setIsThemeSwitcherOpen(false)}
-                    />
-                )}
-            </div>
-        </footer>
-    </div>
-  );
+  const sidebarProps: AppSidebarProps = {
+    isSidebarCollapsed,
+    setIsSidebarCollapsed,
+    setIsSidebarOpen,
+    handleNewChat,
+    activeTab,
+    setActiveTab,
+    searchTerm: historySearchTerm,
+    setSearchTerm: setHistorySearchTerm,
+    historySearchResults,
+    history,
+    activeChatId,
+    onSelectChat: handleSelectChat,
+    onDeleteChat: handleDeleteChat,
+    onRenameChat: handleRenameChat,
+    bookmarks,
+    quranData,
+    onBookmarkClick: handleBookmarkClick,
+    onRemoveBookmark: handleToggleBookmark,
+    savedMessages,
+    onRemoveSaved: handleToggleSaveMessage,
+    theme,
+    onThemeChange: setTheme,
+    isThemeSwitcherOpen,
+    setIsThemeSwitcherOpen,
+    onOpenTutorial: handleStartTutorial,
+  };
 
   if (isDataLoading) {
     return (
@@ -810,49 +1089,64 @@ const App: React.FC = () => {
   }
   
   const MainContent = (
-    <div className="flex-1 flex flex-col h-full min-w-0 bg-[var(--card)]">
-        <header className="p-2 border-b border-[var(--border)] flex items-center lg:hidden">
+    <div className="flex-1 flex flex-col h-full min-w-0 bg-[var(--card)] overflow-hidden">
+        <header className="p-2 border-b border-[var(--border)] flex items-center justify-between lg:hidden h-16 flex-shrink-0">
             <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--accent)]">
                 <IconMenu className="h-6 w-6" />
             </button>
-            <h2 className="font-semibold text-lg mx-auto">{activeChat?.title || "AI Quran Navigator"}</h2>
-            <div className="w-10"></div>
+            <h2 className="font-semibold text-lg truncate px-2 flex-1 text-center">{activeChat?.title || "AI Quran Navigator"}</h2>
+            <div className="flex items-center gap-2">
+                <button onClick={handleNewChat} className="p-2 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--accent)]" title="New Chat">
+                    <IconPlus className="h-6 w-6" />
+                </button>
+                <button onClick={() => setIsChatSearchVisible(p => !p)} className="p-2 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--accent)]" title="Search chat">
+                    <IconSearch className="h-5 w-5" />
+                </button>
+            </div>
         </header>
         <div className="flex-grow min-h-0">
-            {activeTab === 'chat' && (
-              <ChatBox
+            {activeTab === 'chat' ? (
+              (messages.length === 0 && showTutorialPrompt)
+              ? <TutorialPrompt onStart={handleStartTutorial} onSkip={handleSkipTutorial} />
+              : <ChatBox
                   messages={messages}
                   onSendMessage={handleSendMessage}
                   isLoading={isLoading}
                   savedMessages={savedMessages}
                   onToggleSave={handleToggleSaveMessage}
-                  searchTerm={""} // Search is handled in history now
-                  activeMatch={null}
                   networkErrorForMessageId={networkErrorForMessageId}
                   onRetry={handleRetry}
                   onViewVerses={handleViewVerses}
                   onShowCitedVerses={handleShowCitedVerses}
+                  // In-chat search props
+                  isSearchVisible={isChatSearchVisible}
+                  searchTerm={chatSearchTerm}
+                  onSearchTermChange={setChatSearchTerm}
+                  searchTotalMatches={chatSearchResults.totalMatches}
+                  searchCurrentMatchIndex={chatSearchResults.activeMatch ? chatSearchResults.activeMatch.globalIndex + 1 : 0}
+                  onSearchPrev={chatSearchResults.goToPrev}
+                  onSearchNext={chatSearchResults.goToNext}
+                  onSearchClose={() => { setIsChatSearchVisible(false); setChatSearchTerm(''); }}
+                  activeMatch={chatSearchResults.activeMatch}
                 />
-            )}
-            {activeTab === 'bookmarks' && (
+            ) : activeTab === 'bookmarks' ? (
               <BookmarksPanel
                   bookmarks={bookmarks}
                   quranData={quranData}
                   onBookmarkClick={handleBookmarkClick}
                   onRemoveBookmark={handleToggleBookmark}
-                  searchTerm={""} // Search not implemented for this panel yet
+                  searchTerm={""}
                   activeMatch={null}
               />
-            )}
-            {activeTab === 'saved' && (
+            ) : activeTab === 'saved' ? (
                 <SavedPanel
                     savedMessages={savedMessages}
                     onGoToChat={handleSelectChat}
                     onRemoveSaved={handleToggleSaveMessage}
-                    searchTerm={""} // Search not implemented for this panel yet
+                    searchTerm={""}
                     activeMatch={null}
                 />
-            )}
+            ) : null}
         </div>
     </div>
   );
@@ -860,57 +1154,59 @@ const App: React.FC = () => {
   return (
     <>
       <DisclaimerModal isOpen={isDisclaimerOpen} onClose={handleCloseDisclaimer} />
-      <div className="flex h-screen w-screen bg-[var(--muted)] text-[var(--foreground)] overflow-hidden relative">
+      <div className="flex h-[100svh] w-screen bg-[var(--muted)] text-[var(--foreground)]">
         
-        {/* Mobile Sidebar Overlay */}
-        {isSidebarOpen && (
-            <div className="lg:hidden fixed inset-0 z-50">
-                <div className="fixed inset-0 bg-black/60" onClick={() => setIsSidebarOpen(false)}></div>
-                <div className="absolute top-0 left-0 h-full z-10">
-                    {AppSidebar}
-                </div>
-            </div>
-        )}
+        {/* Mobile Overlay - appears when sidebar is open on mobile */}
+        <div
+            className={`lg:hidden fixed inset-0 bg-black/60 z-30 transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setIsSidebarOpen(false)}
+            aria-hidden="true"
+        ></div>
 
-        {/* Main layout container */}
-        <div className="flex w-full h-full">
-            <div className="hidden lg:flex flex-shrink-0">
-                {AppSidebar}
+        {/* UNIFIED SIDEBAR */}
+        <div
+            className={`
+                fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out
+                lg:static lg:z-auto lg:transform-none
+                ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}
+        >
+            <AppSidebar {...sidebarProps} />
+        </div>
+        
+        {/* Main content area */}
+        <div className="flex flex-1 min-w-0">
+            <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-col h-full transition-all duration-300 ${isViewerCollapsed ? 'w-full' : 'w-full lg:w-3/4'}`}>
+                {MainContent}
             </div>
             
-            <div className="flex flex-1 min-w-0">
-                <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-col h-full transition-all duration-300 ${isViewerCollapsed ? 'w-full' : 'w-full lg:w-3/4'}`}>
-                    {MainContent}
-                </div>
-                
-                <main className={`${mobileView === 'viewer' ? 'flex' : 'hidden'} lg:flex relative flex-col overflow-hidden h-full transition-all duration-300 ${isViewerCollapsed ? 'w-0 min-w-0' : 'w-full lg:w-1/4'}`}>
-                  <QuranViewer
-                    ref={quranViewerRef}
-                    quranData={quranData}
-                    targetVerses={targetVerses}
-                    onShowTafsir={handleShowTafsir}
-                    bookmarks={bookmarks}
-                    onToggleBookmark={handleToggleBookmark}
-                    onBackToChat={() => setMobileView('chat')}
-                    onCollapse={() => setIsViewerCollapsed(true)}
-                  />
-                </main>
-                
-                {isViewerCollapsed && (
-                    <div className="hidden lg:block absolute top-0 right-0 h-full z-20">
-                      <button
-                        onClick={() => setIsViewerCollapsed(false)}
-                        className="h-full flex items-center justify-center bg-[var(--card)] border-l border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] transition-colors px-1 shadow-lg"
-                        title="Expand Viewer"
-                      >
-                        <div className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-4">
-                            <IconBook className="h-5 w-5 rotate-90" />
-                            <span className="text-sm font-semibold">Quran Viewer</span>
-                        </div>
-                      </button>
+            <main className={`${mobileView === 'viewer' ? 'flex' : 'hidden'} lg:flex relative flex-col overflow-hidden h-full transition-all duration-300 ${isViewerCollapsed ? 'w-0 min-w-0' : 'w-full lg:w-1/4'}`}>
+              <QuranViewer
+                ref={quranViewerRef}
+                quranData={quranData}
+                targetVerses={targetVerses}
+                onShowTafsir={handleShowTafsir}
+                bookmarks={bookmarks}
+                onToggleBookmark={handleToggleBookmark}
+                onBackToChat={() => setMobileView('chat')}
+                onCollapse={() => setIsViewerCollapsed(true)}
+              />
+            </main>
+            
+            {isViewerCollapsed && (
+                <div className="hidden lg:block absolute top-0 right-0 h-full z-20">
+                  <button
+                    onClick={() => setIsViewerCollapsed(false)}
+                    className="h-full flex items-center justify-center bg-[var(--card)] border-l border-[var(--border)] text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--foreground)] transition-colors px-1 shadow-lg"
+                    title="Expand Viewer"
+                  >
+                    <div className="flex items-center gap-2 -rotate-90 whitespace-nowrap py-4">
+                        <IconBook className="h-5 w-5 rotate-90" />
+                        <span className="text-sm font-semibold">Quran Viewer</span>
                     </div>
-                )}
-            </div>
+                  </button>
+                </div>
+            )}
         </div>
       </div>
       <TafsirModal 

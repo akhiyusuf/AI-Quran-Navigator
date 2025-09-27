@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // Using a consistent stroke-width of 1.5 for a lighter, more modern feel.
@@ -220,5 +219,35 @@ export const IconChevronsRight: React.FC<React.SVGProps<SVGSVGElement>> = (props
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="m6 17 5-5-5-5" />
     <path d="m13 17 5-5-5-5" />
+  </svg>
+);
+
+export const IconMoreHorizontal: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="1" />
+    <circle cx="19" cy="12" r="1" />
+    <circle cx="5" cy="12" r="1" />
+  </svg>
+);
+
+export const IconPencil: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
+
+export const IconBulb: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M12 2.25c-3.31 0-6 2.69-6 6 0 2.02.99 3.84 2.5 4.95V15.75c0 .41.34.75.75.75h5.5c.41 0 .75-.34.75-.75v-2.55c1.51-1.11 2.5-2.93 2.5-4.95 0-3.31-2.69-6-6-6z" />
+    <path d="M9 18.75h6" />
+    <path d="M10.5 15.75h3" />
+  </svg>
+);
+
+export const IconHelpCircle: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
   </svg>
 );

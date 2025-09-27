@@ -15,19 +15,21 @@ export interface Surah {
 
 export interface GroundingChunk {
   web: {
-    uri: string;
-    title: string;
+    // FIX: Made properties optional to match the type from @google/genai, resolving type errors in App.tsx.
+    uri?: string;
+    title?: string;
   };
 }
 
 export interface Message {
-  id: string;
+  id:string;
   sender: 'user' | 'ai';
   text: string;
   interpretation?: string;
   groundingChunks?: GroundingChunk[];
   verses?: VerseLocation[];
   rawContent?: string;
+  suggestions?: string[];
 }
 
 export interface VerseLocation {
@@ -42,6 +44,7 @@ export interface AIResponse {
   rawContent?: string;
   verses?: VerseLocation[];
   groundingChunks?: GroundingChunk[];
+  suggestions?: string[];
 }
 
 export interface ChatSession {
@@ -49,6 +52,7 @@ export interface ChatSession {
   title: string;
   messages: Message[];
   createdAt: number;
+  isTutorial?: boolean;
 }
 
 export interface SavedMessage {

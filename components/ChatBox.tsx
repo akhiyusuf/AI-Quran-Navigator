@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useContext, useMemo } from 'react';
 import type { Message, VerseLocation, GroundingChunk, SavedMessage, Match } from '../types';
-import { IconUser, IconSparkles, IconSend, IconChevronDown, IconLink, IconCopy, IconCheck, IconAlertTriangle, IconStar, IconTarget, IconComment } from './Icons';
+import { IconUser, IconSparkles, IconSend, IconChevronDown, IconLink, IconCopy, IconCheck, IconAlertTriangle, IconStar, IconTarget, IconComment, IconBulb } from './Icons';
+import { SearchControl } from './SearchControl';
 
 interface ChatBoxProps {
   messages: Message[];
@@ -8,12 +9,20 @@ interface ChatBoxProps {
   isLoading: boolean;
   savedMessages: SavedMessage[];
   onToggleSave: (message: Message) => void;
-  searchTerm: string;
-  activeMatch: Match<string> | null;
   networkErrorForMessageId: string | null;
   onRetry: (message: Message) => void;
   onViewVerses: (verses: VerseLocation[]) => void;
   onShowCitedVerses: (verses: VerseLocation[]) => void;
+  // In-chat search props
+  isSearchVisible: boolean;
+  searchTerm: string;
+  activeMatch: Match<string> | null;
+  onSearchTermChange: (term: string) => void;
+  searchTotalMatches: number;
+  searchCurrentMatchIndex: number;
+  onSearchPrev: () => void;
+  onSearchNext: () => void;
+  onSearchClose: () => void;
 }
 
 // Helper function to create an array of verse locations from a string like "1:10-12"
@@ -126,7 +135,7 @@ const renderInlineContent = (
             const chunk = groundingChunks[index];
             renderedMatch = (
                 <a
-                    href={chunk.web.uri}
+                    href={chunk.web.uri || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center mx-1 w-5 h-5 rounded-full bg-[var(--primary-soft)] text-[var(--primary-soft-foreground)] text-xs font-bold hover:bg-[var(--accent)] transition-colors"
@@ -226,10 +235,25 @@ const InterpretationRenderer: React.FC<{
 
     while (i < lines.length) {
         const line = lines[i];
-        const coreContent = getCoreContentForBlockParsing(line);
         if (line.trim() === '') {
             i++; continue;
         }
+
+        // Check for bolded, numbered list items and treat them as H3 headings.
+        const boldNumberedHeadingMatch = line.trim().match(/^\*\*\s*(\d+)\.\s+(.*?)\s*\*\*$/);
+        if (boldNumberedHeadingMatch) {
+            const number = boldNumberedHeadingMatch[1];
+            const content = boldNumberedHeadingMatch[2];
+            elements.push(
+                <h3 key={i} className="text-xl font-semibold mt-6 mb-3">
+                    {number}. {renderInlineContent(content, onViewVerses, { renderCitations: false, groundingChunks })}
+                </h3>
+            );
+            i++;
+            continue;
+        }
+
+        const coreContent = getCoreContentForBlockParsing(line);
         const headingMatch = coreContent.match(/^(#+)\s*(.*)/);
         if (headingMatch) {
             const level = Math.min(headingMatch[1].length, 6);
@@ -276,7 +300,10 @@ const GroundingChunksRenderer = ({ chunks }: { chunks: GroundingChunk[] }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
-    const handleCopy = (url: string, index: number) => {
+    // FIX: Updated `url` parameter to accept `string | undefined` and added a guard clause.
+    // This is necessary because the `GroundingChunk` type now has an optional `uri`.
+    const handleCopy = (url: string | undefined, index: number) => {
+        if (!url) return;
         navigator.clipboard.writeText(url);
         setCopiedIndex(index);
         setTimeout(() => setCopiedIndex(null), 2000);
@@ -295,7 +322,8 @@ const GroundingChunksRenderer = ({ chunks }: { chunks: GroundingChunk[] }) => {
                     {chunks.map((chunk, index) => (
                         <div key={index} className="group flex items-center gap-2 text-sm">
                             <IconLink className="h-4 w-4 flex-shrink-0 text-[var(--muted-foreground)]" />
-                            <a href={chunk.web.uri} target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] truncate hover:underline" title={chunk.web.uri}>
+                            {/* FIX: Added a fallback of '#' for the href to prevent invalid attribute values. */}
+                            <a href={chunk.web.uri || '#'} target="_blank" rel="noopener noreferrer" className="text-[var(--primary)] truncate hover:underline" title={chunk.web.title || chunk.web.uri}>
                                 {chunk.web.title || chunk.web.uri}
                             </a>
                             <button onClick={() => handleCopy(chunk.web.uri, index)} className="p-1 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)] opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Copy link">
@@ -318,7 +346,8 @@ const AIMessage: React.FC<{
   activeMatchRef: React.RefObject<HTMLElement>;
   onViewVerses: (verses: VerseLocation[]) => void;
   onShowCitedVerses: (verses: VerseLocation[]) => void;
-}> = ({ message, isSaved, onToggleSave, searchTerm, activeMatch, activeMatchRef, onViewVerses, onShowCitedVerses }) => {
+  onSendMessage: (message: string) => void;
+}> = ({ message, isSaved, onToggleSave, searchTerm, activeMatch, activeMatchRef, onViewVerses, onShowCitedVerses, onSendMessage }) => {
   const [isRawCopied, setIsRawCopied] = useState(false);
   const occurrenceCounter = useRef(0);
 
@@ -343,7 +372,8 @@ const AIMessage: React.FC<{
 
   const hasInterpretation = message.interpretation && message.interpretation.trim().length > 0;
   const hasGrounding = message.groundingChunks && message.groundingChunks.length > 0;
-  const hasFooterActions = hasGrounding || (message.verses && message.verses.length > 0) || message.rawContent;
+  const hasSuggestions = message.suggestions && message.suggestions.length > 0;
+  const hasFooterActions = hasGrounding || (message.verses && message.verses.length > 0) || message.rawContent || hasSuggestions;
 
   const handleCopyRaw = () => {
     if (!message.rawContent) return;
@@ -423,6 +453,26 @@ const AIMessage: React.FC<{
                                 </button>
                             )}
                         </div>
+
+                        {hasSuggestions && (
+                            <div>
+                                <h4 className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] mb-2">
+                                    <IconBulb className="h-4 w-4 text-[var(--muted-foreground)]" />
+                                    <span>Suggestions</span>
+                                </h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {message.suggestions?.map((prompt, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => onSendMessage(prompt)}
+                                            className="px-3 py-1.5 bg-[var(--accent)] rounded-lg text-left hover:bg-opacity-70 transition-colors"
+                                        >
+                                            <p className="font-medium text-sm text-[var(--accent-foreground)]">{prompt}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </HighlightContext.Provider>
@@ -485,13 +535,35 @@ const NetworkErrorNotification: React.FC<{ onRetry: () => void }> = ({ onRetry }
   </div>
 );
 
-const IntroductoryPrompts: React.FC<{ onPromptClick: (prompt: string) => void }> = ({ onPromptClick }) => {
-  const prompts = [
-    "Where does the Quran mention patience?",
+const allPrompts = [
+    "Where does the Quran mention patience (Sabr)?",
     "Tell me about the story of Prophet Yusuf (Joseph).",
     "What are the characteristics of the believers (Mu'minun)?",
-    "Explain the concept of Tawhid (Oneness of God)."
-  ];
+    "Explain the concept of Tawhid (Oneness of God).",
+    "Summarize the story of Musa (Moses) and Pharaoh.",
+    "What does the Quran say about charity (Sadaqah)?",
+    "Explain the significance of the Night of Power (Laylat al-Qadr).",
+    "Who were the People of the Book (Ahl al-Kitab)?",
+    "Describe the events of the Day of Judgment as mentioned in the Quran.",
+    "What is the story of Maryam (Mary), the mother of Isa (Jesus)?",
+    "What are the five pillars of Islam according to the Quran?",
+    "Tell me about the creation of Adam.",
+    "Explain the concept of Shirk (polytheism).",
+    "What guidance does the Quran give on family and marriage?",
+    "Tell me about the Prophet Ibrahim's (Abraham's) search for God.",
+    "What does the Quran say about forgiveness?"
+];
+
+// Helper function to shuffle an array and take the first N elements
+const getShuffledPrompts = (count: number) => {
+    const shuffled = [...allPrompts].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+};
+
+const IntroductoryPrompts: React.FC<{ onPromptClick: (prompt: string) => void }> = ({ onPromptClick }) => {
+  // useMemo will compute the prompts once per component instance.
+  // Since App.tsx creates a new chat session on load, this effectively changes prompts per visit.
+  const prompts = useMemo(() => getShuffledPrompts(4), []);
 
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -517,8 +589,28 @@ const IntroductoryPrompts: React.FC<{ onPromptClick: (prompt: string) => void }>
   );
 };
 
-export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, isLoading, savedMessages, onToggleSave, searchTerm, activeMatch, networkErrorForMessageId, onRetry, onViewVerses, onShowCitedVerses }) => {
+export const ChatBox: React.FC<ChatBoxProps> = ({ 
+    messages, 
+    onSendMessage, 
+    isLoading, 
+    savedMessages, 
+    onToggleSave, 
+    networkErrorForMessageId, 
+    onRetry, 
+    onViewVerses, 
+    onShowCitedVerses,
+    isSearchVisible,
+    searchTerm,
+    activeMatch,
+    onSearchTermChange,
+    searchTotalMatches,
+    searchCurrentMatchIndex,
+    onSearchPrev,
+    onSearchNext,
+    onSearchClose,
+}) => {
     const [input, setInput] = useState('');
+    const [showScrollDown, setShowScrollDown] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const activeMatchRef = useRef<HTMLElement>(null);
@@ -530,28 +622,37 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, isLoa
     };
 
     useEffect(() => {
+        const container = messageContainerRef.current;
+        if (!container) return;
+
         const isNewMessageAdded = messages.length > prevMessagesLength.current;
         prevMessagesLength.current = messages.length;
 
-        const container = messageContainerRef.current;
-        if (!container || searchTerm) return;
-
         const lastMessage = messages[messages.length - 1];
-
-        // Always scroll for a new user message
-        if (isNewMessageAdded && lastMessage?.sender === 'user') {
-            scrollToBottom();
-            return;
-        }
-
-        // For other updates (like AI streaming), only scroll if user is already near the bottom
-        const SCROLL_THRESHOLD = 150;
-        const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + SCROLL_THRESHOLD;
+        // Check if scrolled to bottom with a 1px tolerance
+        const isScrolledToBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 1;
         
-        if (isNearBottom) {
-             scrollToBottom();
+        if (isNewMessageAdded) {
+            // If the user sent the message or they are already at the bottom, scroll down.
+            if (lastMessage?.sender === 'user' || isScrolledToBottom) {
+                scrollToBottom();
+                setShowScrollDown(false);
+            } else {
+                // Otherwise, the user is scrolled up and an AI message came in, so show the button.
+                setShowScrollDown(true);
+            }
         }
-    }, [messages, searchTerm]);
+
+        // Listener to hide the button if the user scrolls down manually.
+        const handleScroll = () => {
+            const atBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 1;
+            if (atBottom) {
+                setShowScrollDown(false);
+            }
+        };
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [messages]);
     
     useEffect(() => {
         if (activeMatchRef.current) {
@@ -586,7 +687,18 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, isLoa
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--background)]">
+        <div className="relative flex flex-col h-full bg-[var(--background)]">
+            <SearchControl 
+                isSearchVisible={isSearchVisible}
+                searchTerm={searchTerm}
+                onSearchTermChange={onSearchTermChange}
+                totalMatches={searchTotalMatches}
+                currentMatchIndex={searchCurrentMatchIndex}
+                onPrev={onSearchPrev}
+                onNext={onSearchNext}
+                onClose={onSearchClose}
+                placeholder="Search in chat..."
+            />
             {messages.length === 0 ? (
                 <IntroductoryPrompts onPromptClick={onSendMessage} />
             ) : (
@@ -606,6 +718,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, isLoa
                                         activeMatchRef={activeMatchRef}
                                         onViewVerses={onViewVerses}
                                         onShowCitedVerses={onShowCitedVerses}
+                                        onSendMessage={onSendMessage}
                                     />
                                 );
                             }
@@ -626,6 +739,16 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ messages, onSendMessage, isLoa
                         <div ref={messagesEndRef} />
                     </div>
                 </div>
+            )}
+            {showScrollDown && (
+                <button
+                    onClick={scrollToBottom}
+                    className="absolute bottom-28 right-6 lg:bottom-24 lg:right-10 z-10 p-2 rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-lg hover:bg-[var(--primary-hover)] transition-transform animate-bounce"
+                    aria-label="Scroll to latest message"
+                    title="Scroll to latest message"
+                >
+                    <IconChevronDown className="h-6 w-6" />
+                </button>
             )}
             <div className="p-4 bg-[var(--card)] border-t border-[var(--border)] flex-shrink-0">
                 <div className="max-w-5xl mx-auto flex items-start gap-2">

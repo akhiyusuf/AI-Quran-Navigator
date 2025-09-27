@@ -6,7 +6,8 @@ export type Theme =
   | 'light-blue' | 'dark-blue'
   | 'light-green' | 'dark-green'
   | 'light-gold' | 'dark-gold'
-  | 'light-pink' | 'dark-pink';
+  | 'light-pink' | 'dark-pink'
+  | 'light-bw' | 'dark-bw';
 
 interface ThemeSwitcherProps {
   currentTheme: Theme;
@@ -36,11 +37,18 @@ const themes: { name: string; themes: { id: Theme; label: string }[] }[] = [
       { id: "dark-gold", label: "Dark" },
     ],
   },
-    {
+  {
     name: "Pink",
     themes: [
       { id: "light-pink", label: "Light" },
       { id: "dark-pink", label: "Dark" },
+    ],
+  },
+  {
+    name: "B&W",
+    themes: [
+      { id: "light-bw", label: "Light" },
+      { id: "dark-bw", label: "Dark" },
     ],
   },
 ];
@@ -68,7 +76,7 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ currentTheme, onTh
   return (
     <div
       ref={switcherRef}
-      className="absolute bottom-full left-0 mb-2 w-56 origin-bottom-left rounded-md bg-[var(--card)] shadow-lg ring-1 ring-black ring-opacity-5 z-50 p-2"
+      className="absolute left-0 bottom-[calc(100%+0.5rem)] w-56 origin-bottom-left rounded-md bg-[var(--card)] shadow-lg ring-1 ring-black ring-opacity-5 z-50 p-2 max-h-[80vh] overflow-y-auto"
       role="menu"
     >
       {themes.map((group) => (

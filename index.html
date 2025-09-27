@@ -268,6 +268,68 @@
         --saved-soft: #451a03; /* amber-950 */
       }
 
+      [data-theme="light-bw"] {
+        --background: #ffffff;
+        --foreground: #000000;
+        --card: #fafafa;
+        --card-foreground: #000000;
+        --muted: #f5f5f5;
+        --muted-foreground: #737373;
+        --accent: #e5e5e5;
+        --accent-foreground: #000000;
+        --border: #d4d4d4;
+        --input: #a3a3a3;
+        --ring: #000000;
+        --primary: #000000;
+        --primary-foreground: #ffffff;
+        --primary-hover: #262626;
+        --primary-soft: #e5e5e5;
+        --primary-soft-foreground: #000000;
+        --destructive: #dc2626;
+        --destructive-soft: #fee2e2;
+        --destructive-foreground: #b91c1c;
+        --highlight: #d4d4d4;
+        --highlight-active: #525252;
+        --highlight-active-foreground: #ffffff;
+        --overlay: rgba(0, 0, 0, 0.6);
+        --warning: #facc15;
+        --warning-soft: #fef9c3;
+        --warning-foreground: #854d0e;
+        --saved: #737373;
+        --saved-soft: #e5e5e5;
+      }
+      
+      [data-theme="dark-bw"] {
+        --background: #000000;
+        --foreground: #ffffff;
+        --card: #171717;
+        --card-foreground: #ffffff;
+        --muted: #262626;
+        --muted-foreground: #a3a3a3;
+        --accent: #404040;
+        --accent-foreground: #ffffff;
+        --border: #404040;
+        --input: #525252;
+        --ring: #e5e5e5;
+        --primary: #ffffff;
+        --primary-foreground: #000000;
+        --primary-hover: #f5f5f5;
+        --primary-soft: #262626;
+        --primary-soft-foreground: #f5f5f5;
+        --destructive: #ef4444;
+        --destructive-soft: #3f1212;
+        --destructive-foreground: #fca5a5;
+        --highlight: #525252;
+        --highlight-active: #a3a3a3;
+        --highlight-active-foreground: #000000;
+        --overlay: rgba(0, 0, 0, 0.8);
+        --warning: #eab308;
+        --warning-soft: #3f3312;
+        --warning-foreground: #fef08a;
+        --saved: #a3a3a3;
+        --saved-soft: #262626;
+      }
+
       /* GLOBAL OVERRIDES & STYLES */
 
       /* Custom Scrollbar Styling */
@@ -337,6 +399,21 @@
       }
       .prose code {
         color: var(--primary);
+      }
+      
+      @media (max-width: 767px) {
+        .text-3xl {
+          font-size: 1.5rem; /* from 1.875rem (30px -> 24px) */
+        }
+        .text-2xl {
+          font-size: 1.25rem; /* from 1.5rem (24px -> 20px) */
+        }
+        .text-xl {
+            font-size: 1.125rem; /* from 1.25rem (20px -> 18px) */
+        }
+        .text-lg {
+          font-size: 1rem; /* from 1.125rem (18px -> 16px) */
+        }
       }
     </style>
   <script type="importmap">

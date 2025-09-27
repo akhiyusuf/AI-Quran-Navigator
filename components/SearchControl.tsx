@@ -10,6 +10,7 @@ interface SearchControlProps {
   onPrev: () => void;
   onNext: () => void;
   onClose: () => void;
+  placeholder?: string;
 }
 
 export const SearchControl: React.FC<SearchControlProps> = ({ 
@@ -20,7 +21,8 @@ export const SearchControl: React.FC<SearchControlProps> = ({
     currentMatchIndex, 
     onPrev, 
     onNext, 
-    onClose 
+    onClose,
+    placeholder
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -49,7 +51,7 @@ export const SearchControl: React.FC<SearchControlProps> = ({
 
 
   return (
-    <div className="flex-shrink-0 bg-[var(--muted)] py-1">
+    <div className="flex-shrink-0 bg-[var(--muted)] p-2 border-b border-[var(--border)]">
       <div className="flex items-center gap-2">
         <div className="relative flex-grow">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -58,7 +60,7 @@ export const SearchControl: React.FC<SearchControlProps> = ({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search history..."
+            placeholder={placeholder || "Search..."}
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -91,6 +93,13 @@ export const SearchControl: React.FC<SearchControlProps> = ({
             </div>
           )}
         </div>
+         <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+            aria-label="Close search"
+        >
+            <IconX className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );
