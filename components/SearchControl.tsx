@@ -49,61 +49,48 @@ export const SearchControl: React.FC<SearchControlProps> = ({
 
 
   return (
-    <div className="flex-shrink-0 bg-white p-2 border-b border-gray-200 shadow-sm">
+    <div className="flex-shrink-0 bg-[var(--muted)] py-1">
       <div className="flex items-center gap-2">
         <div className="relative flex-grow">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <IconSearch className="h-5 w-5 text-slate-400" />
+            <IconSearch className="h-4 w-4 text-[var(--muted-foreground)]" />
           </div>
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search..."
+            placeholder="Search history..."
             value={searchTerm}
             onChange={(e) => onSearchTermChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="block w-full rounded-md border-slate-300 py-2 pl-10 pr-10 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="block w-full rounded-md border-[var(--input)] bg-[var(--card)] text-[var(--card-foreground)] py-1.5 pl-9 pr-10 shadow-sm focus:border-[var(--ring)] focus:ring-[var(--ring)] sm:text-sm"
             aria-label="Search input"
           />
           {searchTerm && (
-            <button
-                onClick={() => onSearchTermChange('')}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 group"
-                aria-label="Clear search"
-            >
-                <IconX className="h-5 w-5 text-slate-400 group-hover:text-slate-600" />
-            </button>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-1">
+              {totalMatches > 0 && (
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <span className="text-xs text-[var(--muted-foreground)] font-medium w-14 text-center" aria-live="polite">
+                      {currentMatchIndex} of {totalMatches}
+                  </span>
+                  <button 
+                      onClick={onPrev} 
+                      className="p-1 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+                      aria-label="Previous result"
+                  >
+                    <IconChevronUp className="h-4 w-4" />
+                  </button>
+                  <button 
+                      onClick={onNext} 
+                      className="p-1 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--accent)] hover:text-[var(--accent-foreground)]"
+                      aria-label="Next result"
+                  >
+                    <IconChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
-
-        {totalMatches > 0 && (
-          <div className="flex items-center gap-1 flex-shrink-0 bg-slate-100 rounded-md p-1">
-            <span className="text-sm text-slate-600 font-medium w-16 text-center" aria-live="polite">
-                {currentMatchIndex} of {totalMatches}
-            </span>
-            <button 
-                onClick={onPrev} 
-                className="p-1 rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-                aria-label="Previous result"
-            >
-              <IconChevronUp className="h-5 w-5" />
-            </button>
-            <button 
-                onClick={onNext} 
-                className="p-1 rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-                aria-label="Next result"
-            >
-              <IconChevronDown className="h-5 w-5" />
-            </button>
-          </div>
-        )}
-        <button
-            onClick={onClose}
-            className="p-2 rounded-md text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-            aria-label="Close search"
-        >
-            <IconX className="h-5 w-5" />
-        </button>
       </div>
     </div>
   );

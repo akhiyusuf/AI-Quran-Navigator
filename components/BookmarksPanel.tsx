@@ -32,7 +32,7 @@ const Highlight: React.FC<{
           const isActive = isParentActive && occurrenceCounter === activeOccurrenceInParent;
           occurrenceCounter++;
           return (
-            <mark key={i} className={`rounded px-0.5 py-0 transition-colors ${isActive ? 'bg-orange-400 text-white' : 'bg-yellow-200 text-slate-800'}`}>
+            <mark key={i} className={`rounded px-0.5 py-0 transition-colors ${isActive ? 'bg-[var(--highlight-active)] text-[var(--highlight-active-foreground)]' : 'bg-[var(--highlight)] text-[var(--foreground)]'}`}>
               {part}
             </mark>
           );
@@ -47,9 +47,9 @@ const Highlight: React.FC<{
 export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({ bookmarks, quranData, onBookmarkClick, onRemoveBookmark, searchTerm, activeMatch }) => {
   if (bookmarks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-slate-500 p-4 bg-white">
+      <div className="flex flex-col items-center justify-center h-full text-center text-[var(--muted-foreground)] p-4 bg-[var(--card)]">
         <IconBookmark className="h-12 w-12 mb-4" />
-        <h3 className="font-semibold text-slate-700">No Bookmarks Yet</h3>
+        <h3 className="font-semibold text-[var(--foreground)]">No Bookmarks Yet</h3>
         <p className="text-sm">Click the bookmark icon next to a verse to save it here.</p>
       </div>
     );
@@ -60,19 +60,19 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({ bookmarks, quran
   };
 
   return (
-    <div className="h-full flex-grow overflow-y-auto bg-white">
-      <ul className="divide-y divide-gray-200">
+    <div className="h-full flex-grow overflow-y-auto bg-[var(--card)]">
+      <ul className="divide-y divide-[var(--border)]">
         {bookmarks.map((bookmark, index) => {
           const bookmarkId = `${bookmark.surah}:${bookmark.ayah}`;
           const isParentActive = activeMatch?.itemId === bookmarkId;
           
           return (
-            <li key={index} className={`group flex items-center justify-between transition-colors duration-150 hover:bg-slate-50`}>
+            <li key={index} className={`group flex items-center justify-between transition-colors duration-150 hover:bg-[var(--accent)]`}>
               <button
                 onClick={() => onBookmarkClick(bookmark)}
                 className="text-left w-full px-4 py-3"
               >
-                <p className="font-semibold text-slate-800">
+                <p className="font-semibold text-[var(--foreground)]">
                   <Highlight 
                     text={getSurahName(bookmark.surah)} 
                     highlight={searchTerm} 
@@ -80,7 +80,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({ bookmarks, quran
                     activeOccurrenceInParent={activeMatch?.occurrenceInItem ?? -1}
                   />
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[var(--muted-foreground)]">
                   <Highlight 
                     text={`Verse ${bookmark.ayah}`} 
                     highlight={searchTerm} 
@@ -91,7 +91,7 @@ export const BookmarksPanel: React.FC<BookmarksPanelProps> = ({ bookmarks, quran
               </button>
               <button
                 onClick={() => onRemoveBookmark(bookmark)}
-                className="mr-4 ml-2 p-2 rounded-full text-slate-400 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                className="mr-4 ml-2 p-2 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--destructive-soft)] hover:text-[var(--destructive)] opacity-0 group-hover:opacity-100 transition-all duration-200"
                 aria-label={`Remove bookmark for verse ${bookmark.surah}:${bookmark.ayah}`}
               >
                 <IconTrash className="h-5 w-5" />

@@ -27,6 +27,7 @@ export interface Message {
   interpretation?: string;
   groundingChunks?: GroundingChunk[];
   verses?: VerseLocation[];
+  rawContent?: string;
 }
 
 export interface VerseLocation {
@@ -38,7 +39,7 @@ export interface AIResponse {
   type: 'quran_query' | 'general_chat';
   responseText: string;
   interpretation?: string;
-
+  rawContent?: string;
   verses?: VerseLocation[];
   groundingChunks?: GroundingChunk[];
 }

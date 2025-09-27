@@ -12,9 +12,331 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        background-color: var(--background);
+        color: var(--foreground);
       }
       .arabic-text {
         font-family: 'Noto Naskh Arabic', serif;
+      }
+      
+      /* THEME DEFINITIONS */
+      :root, [data-theme="light-blue"] {
+        --background: #f8fafc; /* slate-50 */
+        --foreground: #0f172a; /* slate-900 */
+        --card: #ffffff; /* white */
+        --card-foreground: #0f172a; /* slate-900 */
+        --muted: #f1f5f9; /* slate-100 */
+        --muted-foreground: #64748b; /* slate-500 */
+        --accent: #e2e8f0; /* slate-200 */
+        --accent-foreground: #0f172a; /* slate-900 */
+        --border: #e2e8f0; /* slate-200 */
+        --input: #cbd5e1; /* slate-300 */
+        --ring: #3b82f6; /* blue-500 */
+        --primary: #2563eb; /* blue-600 */
+        --primary-foreground: #ffffff; /* white */
+        --primary-hover: #1d4ed8; /* blue-700 */
+        --primary-soft: #dbeafe; /* blue-100 */
+        --primary-soft-foreground: #1e4d87; /* darker blue for better contrast */
+        --destructive: #dc2626; /* red-600 */
+        --destructive-soft: #fee2e2; /* red-100 */
+        --destructive-foreground: #b91c1c; /* red-800 */
+        --highlight: #fef08a; /* yellow-200 */
+        --highlight-active: #fb923c; /* orange-400 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.6);
+        --warning: #facc15; /* yellow-400 */
+        --warning-soft: #fef9c3; /* yellow-100 */
+        --warning-foreground: #854d0e; /* yellow-800 */
+        --saved: #f59e0b; /* amber-500 */
+        --saved-soft: #fef3c7; /* amber-100 */
+      }
+
+      [data-theme="dark-blue"] {
+        --background: #020617; /* slate-950 */
+        --foreground: #f8fafc; /* slate-50 */
+        --card: #0f172a; /* slate-900 */
+        --card-foreground: #f8fafc; /* slate-50 */
+        --muted: #1e293b; /* slate-800 */
+        --muted-foreground: #94a3b8; /* slate-400 */
+        --accent: #334155; /* slate-700 */
+        --accent-foreground: #f8fafc; /* slate-50 */
+        --border: #334155; /* slate-700 */
+        --input: #475569; /* slate-600 */
+        --ring: #60a5fa; /* blue-400 */
+        --primary: #3b82f6; /* blue-500 */
+        --primary-foreground: #ffffff; /* white */
+        --primary-hover: #60a5fa; /* blue-400 */
+        --primary-soft: #1e40af; /* blue-800 */
+        --primary-soft-foreground: #dbeafe; /* lighter blue for better contrast */
+        --destructive: #ef4444; /* red-500 */
+        --destructive-soft: #3f1212; /* custom dark red */
+        --destructive-foreground: #fca5a5; /* red-300 */
+        --highlight: #a16207; /* yellow-700 */
+        --highlight-active: #ea580c; /* orange-600 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.8);
+        --warning: #eab308; /* yellow-500 */
+        --warning-soft: #3f3312; /* custom dark yellow */
+        --warning-foreground: #fef08a; /* yellow-200 */
+        --saved: #fcd34d; /* amber-300 */
+        --saved-soft: #451a03; /* amber-950 */
+      }
+      
+      [data-theme="light-green"] {
+        --background: #f0fdf4; /* green-50 */
+        --foreground: #0f172a; /* slate-900 */
+        --card: #ffffff;
+        --card-foreground: #0f172a; /* slate-900 */
+        --muted: #dcfce7; /* green-100 */
+        --muted-foreground: #166534; /* green-700 */
+        --accent: #bbf7d0; /* green-200 */
+        --accent-foreground: #14532d;
+        --border: #86efac; /* green-300 */
+        --input: #4ade80; /* green-400 */
+        --ring: #22c55e; /* green-500 */
+        --primary: #16a34a; /* green-600 */
+        --primary-foreground: #ffffff;
+        --primary-hover: #15803d; /* green-700 */
+        --primary-soft: #dcfce7; /* green-100 */
+        --primary-soft-foreground: #14532d; /* darker green for better contrast */
+        --destructive: #dc2626; /* red-600 */
+        --destructive-soft: #fee2e2; /* red-100 */
+        --destructive-foreground: #b91c1c; /* red-800 */
+        --highlight: #fef08a; /* yellow-200 */
+        --highlight-active: #fb923c; /* orange-400 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.6);
+        --warning: #facc15; /* yellow-400 */
+        --warning-soft: #fef9c3; /* yellow-100 */
+        --warning-foreground: #854d0e; /* yellow-800 */
+        --saved: #f59e0b; /* amber-500 */
+        --saved-soft: #fef3c7; /* amber-100 */
+      }
+
+      [data-theme="dark-green"] {
+        --background: #052e16; /* green-950 */
+        --foreground: #ecfdf5; /* green-50 */
+        --card: #14532d; /* green-900 */
+        --card-foreground: #ecfdf5;
+        --muted: #166534; /* green-800 */
+        --muted-foreground: #86efac; /* green-400 */
+        --accent: #15803d; /* green-700 */
+        --accent-foreground: #ecfdf5;
+        --border: #15803d; /* green-700 */
+        --input: #16a34a; /* green-600 */
+        --ring: #4ade80; /* green-400 */
+        --primary: #22c55e; /* green-500 */
+        --primary-foreground: #052e16;
+        --primary-hover: #4ade80; /* green-400 */
+        --primary-soft: #166534; /* green-800 */
+        --primary-soft-foreground: #bbf7d0; /* lighter green for better contrast */
+        --destructive: #ef4444; /* red-500 */
+        --destructive-soft: #3f1212; /* custom dark red */
+        --destructive-foreground: #fca5a5; /* red-300 */
+        --highlight: #a16207; /* yellow-700 */
+        --highlight-active: #ea580c; /* orange-600 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.8);
+        --warning: #eab308; /* yellow-500 */
+        --warning-soft: #3f3312; /* custom dark yellow */
+        --warning-foreground: #fef08a; /* yellow-200 */
+        --saved: #fcd34d; /* amber-300 */
+        --saved-soft: #451a03; /* amber-950 */
+      }
+      
+      [data-theme="light-gold"] {
+        --background: #fffbeb; /* amber-50 */
+        --foreground: #0f172a; /* slate-900 */
+        --card: #ffffff;
+        --card-foreground: #0f172a; /* slate-900 */
+        --muted: #fef3c7; /* amber-100 */
+        --muted-foreground: #92400e; /* amber-700 */
+        --accent: #fde68a; /* amber-200 */
+        --accent-foreground: #78350f;
+        --border: #fcd34d; /* amber-300 */
+        --input: #fbbf24; /* amber-400 */
+        --ring: #f59e0b; /* amber-500 */
+        --primary: #d97706; /* amber-600 */
+        --primary-foreground: #ffffff;
+        --primary-hover: #b45309; /* amber-700 */
+        --primary-soft: #fef3c7; /* amber-100 */
+        --primary-soft-foreground: #78350f; /* darker amber for better contrast */
+        --destructive: #dc2626; /* red-600 */
+        --destructive-soft: #fee2e2; /* red-100 */
+        --destructive-foreground: #b91c1c; /* red-800 */
+        --highlight: #fed7aa; /* orange-200 */
+        --highlight-active: #fb923c; /* orange-400 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.6);
+        --warning: #facc15; /* yellow-400 */
+        --warning-soft: #fef9c3; /* yellow-100 */
+        --warning-foreground: #854d0e; /* yellow-800 */
+        --saved: #f59e0b; /* amber-500 */
+        --saved-soft: #fef3c7; /* amber-100 */
+      }
+      
+      [data-theme="dark-gold"] {
+        --background: #451a03; /* amber-950 */
+        --foreground: #fefce8; /* yellow-50 */
+        --card: #78350f; /* amber-900 */
+        --card-foreground: #fefce8;
+        --muted: #92400e; /* amber-800 */
+        --muted-foreground: #fde68a; /* amber-300 */
+        --accent: #b45309; /* amber-700 */
+        --accent-foreground: #fefce8;
+        --border: #b45309;
+        --input: #d97706; /* amber-600 */
+        --ring: #fcd34d; /* amber-300 */
+        --primary: #f59e0b; /* amber-500 */
+        --primary-foreground: #451a03;
+        --primary-hover: #fbbf24; /* amber-400 */
+        --primary-soft: #92400e; /* amber-800 */
+        --primary-soft-foreground: #fef3c7; /* lighter amber for better contrast */
+        --destructive: #ef4444; /* red-500 */
+        --destructive-soft: #3f1212; /* custom dark red */
+        --destructive-foreground: #fca5a5; /* red-300 */
+        --highlight: #a16207; /* yellow-700 */
+        --highlight-active: #ea580c; /* orange-600 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.8);
+        --warning: #eab308; /* yellow-500 */
+        --warning-soft: #3f3312; /* custom dark yellow */
+        --warning-foreground: #fef08a; /* yellow-200 */
+        --saved: #fcd34d; /* amber-300 */
+        --saved-soft: #451a03; /* amber-950 */
+      }
+      
+      [data-theme="light-pink"] {
+        --background: #fdf2f8; /* pink-50 */
+        --foreground: #0f172a; /* slate-900 */
+        --card: #ffffff;
+        --card-foreground: #0f172a; /* slate-900 */
+        --muted: #fce7f3; /* pink-100 */
+        --muted-foreground: #9d174d; /* pink-700 */
+        --accent: #fbcfe8; /* pink-200 */
+        --accent-foreground: #831843;
+        --border: #f9a8d4; /* pink-300 */
+        --input: #f472b6; /* pink-400 */
+        --ring: #ec4899; /* pink-500 */
+        --primary: #db2777; /* pink-600 */
+        --primary-foreground: #ffffff;
+        --primary-hover: #be185d; /* pink-700 */
+        --primary-soft: #fce7f3; /* pink-100 */
+        --primary-soft-foreground: #831843; /* darker pink for better contrast */
+        --destructive: #dc2626; /* red-600 */
+        --destructive-soft: #fee2e2; /* red-100 */
+        --destructive-foreground: #b91c1c; /* red-800 */
+        --highlight: #fef08a; /* yellow-200 */
+        --highlight-active: #fb923c; /* orange-400 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.6);
+        --warning: #facc15; /* yellow-400 */
+        --warning-soft: #fef9c3; /* yellow-100 */
+        --warning-foreground: #854d0e; /* yellow-800 */
+        --saved: #f59e0b; /* amber-500 */
+        --saved-soft: #fef3c7; /* amber-100 */
+      }
+      
+      [data-theme="dark-pink"] {
+        --background: #500724; /* pink-950 */
+        --foreground: #fdf4ff; /* fuchsia-50 */
+        --card: #831843; /* pink-900 */
+        --card-foreground: #fdf4ff;
+        --muted: #9d174d; /* pink-800 */
+        --muted-foreground: #fbcfe8; /* pink-300 */
+        --accent: #be185d; /* pink-700 */
+        --accent-foreground: #fdf4ff;
+        --border: #be185d;
+        --input: #db2777; /* pink-600 */
+        --ring: #f9a8d4; /* pink-300 */
+        --primary: #ec4899; /* pink-500 */
+        --primary-foreground: #500724;
+        --primary-hover: #f472b6; /* pink-400 */
+        --primary-soft: #9d174d; /* pink-800 */
+        --primary-soft-foreground: #fbcfe8; /* lighter pink for better contrast */
+        --destructive: #ef4444; /* red-500 */
+        --destructive-soft: #3f1212; /* custom dark red */
+        --destructive-foreground: #fca5a5; /* red-300 */
+        --highlight: #a16207; /* yellow-700 */
+        --highlight-active: #ea580c; /* orange-600 */
+        --highlight-active-foreground: #ffffff; /* white */
+        --overlay: rgba(0, 0, 0, 0.8);
+        --warning: #eab308; /* yellow-500 */
+        --warning-soft: #3f3312; /* custom dark yellow */
+        --warning-foreground: #fef08a; /* yellow-200 */
+        --saved: #fcd34d; /* amber-300 */
+        --saved-soft: #451a03; /* amber-950 */
+      }
+
+      /* GLOBAL OVERRIDES & STYLES */
+
+      /* Custom Scrollbar Styling */
+      ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: var(--muted);
+      }
+      ::-webkit-scrollbar-thumb {
+        background-color: var(--accent);
+        border-radius: 5px;
+        border: 2px solid var(--muted);
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background-color: var(--primary);
+      }
+
+      /* Tailwind Typography Overrides for Theme Compatibility */
+      .prose {
+        --tw-prose-body: var(--card-foreground);
+        --tw-prose-headings: var(--card-foreground);
+        --tw-prose-lead: var(--card-foreground);
+        --tw-prose-links: var(--primary);
+        --tw-prose-bold: var(--card-foreground);
+        --tw-prose-counters: var(--muted-foreground);
+        --tw-prose-bullets: var(--muted-foreground);
+        --tw-prose-hr: var(--border);
+        --tw-prose-quotes: var(--card-foreground);
+        --tw-prose-quote-borders: var(--border);
+        --tw-prose-captions: var(--muted-foreground);
+        --tw-prose-code: var(--primary);
+        --tw-prose-pre-code: var(--primary-soft-foreground);
+        --tw-prose-pre-bg: var(--primary-soft);
+        --tw-prose-th-borders: var(--border);
+        --tw-prose-td-borders: var(--border);
+        /* Invert vars are set to the same to override default dark mode behavior */
+        --tw-prose-invert-body: var(--card-foreground);
+        --tw-prose-invert-headings: var(--card-foreground);
+        --tw-prose-invert-lead: var(--card-foreground);
+        --tw-prose-invert-links: var(--primary);
+        --tw-prose-invert-bold: var(--card-foreground);
+        --tw-prose-invert-counters: var(--muted-foreground);
+        --tw-prose-invert-bullets: var(--muted-foreground);
+        --tw-prose-invert-hr: var(--border);
+        --tw-prose-invert-quotes: var(--card-foreground);
+        --tw-prose-invert-quote-borders: var(--border);
+        --tw-prose-invert-captions: var(--muted-foreground);
+        --tw-prose-invert-code: var(--primary);
+        --tw-prose-invert-pre-code: var(--primary-soft-foreground);
+        --tw-prose-invert-pre-bg: var(--primary-soft);
+        --tw-prose-invert-th-borders: var(--border);
+        --tw-prose-invert-td-borders: var(--border);
+      }
+
+      /* Fix for prose elements not inheriting theme colors, likely due to CDN script specificity */
+      strong, b {
+        font-weight: 600; /* Global bold style */
+      }
+      .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6,
+      .prose p,
+      .prose blockquote,
+      .prose li,
+      .prose strong, .prose b {
+        color: var(--card-foreground);
+      }
+      .prose code {
+        color: var(--primary);
       }
     </style>
   <script type="importmap">

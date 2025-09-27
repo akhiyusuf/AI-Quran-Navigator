@@ -32,7 +32,7 @@ const Highlight: React.FC<{
           const isActive = isParentActive && (occurrenceOffset + occurrenceCounter) === activeOccurrenceInParent;
           occurrenceCounter++;
           return (
-            <mark key={i} className={`rounded px-0.5 py-0 transition-colors ${isActive ? 'bg-orange-400 text-white' : 'bg-yellow-200 text-slate-800'}`}>
+            <mark key={i} className={`rounded px-0.5 py-0 transition-colors ${isActive ? 'bg-[var(--highlight-active)] text-[var(--highlight-active-foreground)]' : 'bg-[var(--highlight)] text-[var(--foreground)]'}`}>
               {part}
             </mark>
           );
@@ -65,10 +65,10 @@ const SavedMessageItem: React.FC<{
   const matchesInTitle = getMatchesCount(chatTitle);
 
   return (
-    <li className={`group p-4 border-b border-gray-200 last:border-b-0 transition-colors duration-150 ${isParentActive ? 'bg-yellow-100' : ''}`}>
+    <li className={`group p-4 border-b border-[var(--border)] last:border-b-0 transition-colors duration-150 ${isParentActive ? 'bg-[var(--highlight)]' : ''}`}>
       <div className="flex justify-between items-start">
         <div className="flex-grow pr-4">
-          <p className="text-sm text-slate-600 line-clamp-3">
+          <p className="text-sm text-[var(--muted-foreground)] line-clamp-3">
             <Highlight 
               text={contentSnippet} 
               highlight={searchTerm} 
@@ -78,8 +78,8 @@ const SavedMessageItem: React.FC<{
             />
             {contentSnippet.length === 100 && '...'}
           </p>
-          <div className="mt-2 text-xs text-slate-400">
-            From: <span className="font-medium text-slate-500">
+          <div className="mt-2 text-xs text-[var(--muted-foreground)]">
+            From: <span className="font-medium text-[var(--foreground)]">
                 <Highlight 
                   text={chatTitle} 
                   highlight={searchTerm} 
@@ -92,7 +92,7 @@ const SavedMessageItem: React.FC<{
         </div>
         <button
           onClick={() => onRemoveSaved(message)}
-          className="flex-shrink-0 p-2 rounded-full text-slate-400 hover:bg-red-100 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+          className="flex-shrink-0 p-2 rounded-full text-[var(--muted-foreground)] hover:bg-[var(--destructive-soft)] hover:text-[var(--destructive)] opacity-0 group-hover:opacity-100 transition-all"
           aria-label="Remove saved message"
         >
           <IconTrash className="h-5 w-5" />
@@ -101,7 +101,7 @@ const SavedMessageItem: React.FC<{
       <div className="mt-3">
         <button
           onClick={() => onGoToChat(chatId)}
-          className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full hover:bg-blue-200 transition-colors"
+          className="inline-flex items-center gap-2 px-3 py-1 text-xs font-medium text-[var(--primary-soft-foreground)] bg-[var(--primary-soft)] rounded-full hover:bg-[var(--accent)] transition-colors"
         >
           <IconMessageCircle className="w-4 h-4" />
           Go to Conversation
@@ -114,16 +114,16 @@ const SavedMessageItem: React.FC<{
 export const SavedPanel: React.FC<SavedPanelProps> = ({ savedMessages, onGoToChat, onRemoveSaved, searchTerm, activeMatch }) => {
   if (savedMessages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-slate-500 p-4 bg-white">
+      <div className="flex flex-col items-center justify-center h-full text-center text-[var(--muted-foreground)] p-4 bg-[var(--card)]">
         <IconStar className="h-12 w-12 mb-4" />
-        <h3 className="font-semibold text-slate-700">No Saved Replies</h3>
+        <h3 className="font-semibold text-[var(--foreground)]">No Saved Replies</h3>
         <p className="text-sm">Click the star icon on an AI reply to save it here for later.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex-grow overflow-y-auto bg-white">
+    <div className="h-full flex-grow overflow-y-auto bg-[var(--card)]">
       <ul className="">
         {savedMessages.map((saved) => (
           <SavedMessageItem
