@@ -1,0 +1,17 @@
+{
+  "name": "AI Quran Navigator",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev",
+      "description": "Vite dev server for the React app on http://localhost:3000"
+    }
+  ],
+  "ports": [
+    {
+      "name": "vite",
+      "port": 3000
+    }
+  ]
+}
